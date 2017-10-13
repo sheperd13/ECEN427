@@ -1,4 +1,4 @@
-j#include "display.h"
+#include "display.h"
 #include <time.h>
 #include <stdlib.h>
 
