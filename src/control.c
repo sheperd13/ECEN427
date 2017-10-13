@@ -11,13 +11,61 @@
 #include "bitmap.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
 
 #define KILL_ALIEN_DIGITS 2
 #define INPUT_MULTIPLIER 10
 #define TANK_FURTHEST_LEFT_VAL 0
 
+#define BTN_CENTER_MASK 0x01
+#define BTN_RIGHT_MASK 0x02
+#define BTN_DOWN_MASK 0x04
+#define BTN_LEFT_MASK 0x08
+#define BTN_UP_MASK 0x10
+#define BTN_RIGHT_LEFT_MASK 0x0A
+
+// Change to increase/decrease speed
+#define ALIEN_INIT_MAX_COUNTER_VAL 65 	// This is initial speed of aliens at start of game.
+										// Increase to slow down.
+#define ALIEN_BULLET_MIN_WAIT 65 // This is the minimum that alien has to wait before shooting
+#define ALIEN_BULLET_FREQ 400	// Increase to get a wider range of wait times before alien shoots
+
+#define UNIVERSAL_BULLET_SPEED_VAL 3 // Increase to slow down bullet speeds if used
+#define ALIEN_BULLET_SPEED_VAL 5 // Increase to slow down alien bullet speed
+#define TANK_BULLET_SPEED_VAL 5 // Increase to slow down tank bullet speed
+
+#define TANK_MOVE_SPEED_VAL 2 // Increase to slow down tank
+
+#define ALIEN_EXPLOSION_VAL 10
+
+enum game_st_t {
+	init_st,
+	start_screen_st,
+	resume_game_st,
+	game_over_st
+} currentState = init_st;
+
+point_t alien_pos;
+
+uint8_t alien_death_index = INVALID_INDEX;
+uint8_t start_alien_explosion_counter = FALSE;
+uint8_t alien_explosion_counter = 0;
+uint8_t alien_explosion_counter_val = ALIEN_EXPLOSION_VAL;
+
 uint8_t start_from_left;
 uint8_t red_guy_on_screen;
+
+uint8_t alien_speed_curr_counter_val = 0;
+uint8_t alien_speed_max_counter_val = ALIEN_INIT_MAX_COUNTER_VAL;
+
+uint16_t alien_bullet_rate_counter = 0;
+uint16_t alien_bullet_rate_counter_max = ALIEN_BULLET_MIN_WAIT;
+
+uint8_t alien_bullet_speed_counter = 0;
+static uint8_t alien_bullet_speed_counter_max = UNIVERSAL_BULLET_SPEED_VAL;
+static uint8_t bullet_number = 0;
+
+uint8_t tank_move_speed_counter = 0;
 
 enum object_type {tank, bunker, alien, saucer};
 
@@ -144,6 +192,124 @@ void update_bullets() {
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 }
 
+void game_tick(uint32_t btn) {
+
+	switch(currentState) {
+		case init_st:
+			srand(522);
+			break;
+		case start_screen_st:
+			break;
+		case resume_game_st:
+			alien_speed_curr_counter_val++;
+			alien_bullet_rate_counter++;
+			alien_bullet_speed_counter++;
+			if (start_alien_explosion_counter) {
+				alien_explosion_counter++;
+			}
+			break;
+		case game_over_st:
+			break;
+		default:
+			break;
+	}
+
+	//transitions
+	switch(currentState) {
+		case init_st:
+			display_black_screen();
+			printf("\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n\r----------READY------------------\n\r@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n\r");
+			currentState = start_screen_st;
+			break;
+		case start_screen_st:
+			if ((btn & BTN_UP_MASK) == BTN_UP_MASK) {
+				display_render();
+				alien_bullet_rate_counter_max = rand() % ALIEN_BULLET_FREQ + ALIEN_BULLET_MIN_WAIT;
+				currentState = resume_game_st;
+			}
+			break;
+		case resume_game_st:
+			if (get_most_recent_alien_death() < INVALID_INDEX) {
+				alien_pos = get_alien_block_position();
+				alien_death_index = get_most_recent_alien_death();
+				set_most_recent_alien_death(INVALID_INDEX);
+				//display_erase_alien(alien_death_index, curr_alien_pos);
+				display_explode_alien(alien_death_index, alien_pos);
+				printf("An alien died with index of (%d, %d)!\n\r",alien_pos.x, alien_pos.y );
+				start_alien_explosion_counter = TRUE;
+
+			}
+			if (alien_explosion_counter >= alien_explosion_counter_val) {
+				display_erase_alien(alien_death_index, alien_pos);
+				printf("after explosion, erased with index of (%d, %d)!\n\r",alien_pos.x, alien_pos.y );
+				start_alien_explosion_counter = FALSE;
+				alien_explosion_counter = 0;
+			}
+			// Moves and updates the aliens
+			if (alien_speed_curr_counter_val >= alien_speed_max_counter_val) {
+				move_aliens();
+				draw_aliens();
+				alien_speed_max_counter_val = get_aliens_still_alive() + 10;
+				alien_speed_curr_counter_val = 0;
+			}
+			// the frequency the aliens shoot their bullets
+			if (alien_bullet_rate_counter >= alien_bullet_rate_counter_max) {
+				if (bullet_number > ALIEN_BULLET_2) {
+				//if we have the max number of alien bullets on screen, then
+				//try to shoot bullet 0 again
+					bullet_number = 0;
+				}
+				shoot_alien_bullet(bullet_number);	//shoots the bullet
+				bullet_number++;
+				alien_bullet_rate_counter_max = rand() % ALIEN_BULLET_FREQ + ALIEN_BULLET_MIN_WAIT;
+				alien_bullet_rate_counter = 0;
+			}
+			// Tank shoots
+			if ((btn & BTN_CENTER_MASK) == BTN_CENTER_MASK) {
+				shoot_tank_bullet();
+			}
+			// Moves the bullets and updates them
+			if (alien_bullet_speed_counter >= alien_bullet_speed_counter_max) {
+				update_bullets();
+				draw_bullets();
+				alien_bullet_speed_counter = 0;
+			}
+			if ((btn & BTN_DOWN_MASK) == BTN_DOWN_MASK) {
+				cleanup_platform();	//cleanup
+				exit(0);
+			}
+
+			if ((btn & BTN_RIGHT_MASK) == BTN_RIGHT_MASK) {
+				if (tank_move_speed_counter >= TANK_MOVE_SPEED_VAL) {
+					move_tank_right();
+					draw_tank();
+					tank_move_speed_counter = 0;
+				}
+				else {
+					tank_move_speed_counter++;
+				}
+			}
+			else if ((btn & BTN_LEFT_MASK) == BTN_LEFT_MASK) {
+				if (tank_move_speed_counter >= TANK_MOVE_SPEED_VAL) {
+					move_tank_left();
+					draw_tank();
+					tank_move_speed_counter = 0;
+				}
+				else {
+					tank_move_speed_counter++;
+				}
+			}
+
+			break;
+		case game_over_st:
+			break;
+		default:
+			break;
+	}
+
+}
+
+
 //contains the switch statement required for lab 3 passoff. Should eventually
 //contain the control for the gameplay
 void control() {
@@ -179,7 +345,7 @@ void control() {
 	case '2':
 	//kill aliens. this will wait for a two digit input (00-54) and will
 	//kill the alien on the screen that corresponds to the input value
-
+		printf("at this point, we shouldn't have hit case 2 on keyboard");
 		//for each digit input compute the integer value
 		for (temp = 0; temp < KILL_ALIEN_DIGITS; temp++) {
 			k = getchar();

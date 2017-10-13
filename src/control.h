@@ -11,6 +11,7 @@
 #include "globals.h"
 
 //controls the flow of the game
+void game_tick(uint32_t btn);
 void control();
 
 

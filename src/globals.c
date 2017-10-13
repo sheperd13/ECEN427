@@ -28,7 +28,9 @@ static uint8_t aliens_moving_direction = 1;	//direction the aliens are moving
 static uint8_t aliens_hit_end = 0;	//says whether or not the aliens hit end of screen
 
 uint8_t alien_array[NUM_ALIENS];	//contains array of aliens that says whether they are alive or not
-uint64_t alien_live_bits = 0;	//used for initialized the alien array
+uint8_t alien_still_alive = NUM_ALIENS;
+uint8_t alien_just_died_index = INVALID_INDEX;
+uint64_t alien_live_bits = 0;	//used for initialized the alien array. UNUSED?
 
 static uint16_t max_alien_pos;	//max alien position
 static uint16_t min_alien_pos;	//min alien position
@@ -139,7 +141,8 @@ void init_alien_array(){
 	for(i = 0; i < NUM_ALIENS; i++){
 		bits = bits | (1 << i);
 	}
-	alien_live_bits = bits;
+	alien_still_alive = NUM_ALIENS;
+	alien_live_bits = bits; // unused?
 }
 
 //calles the init functions listed above
@@ -341,4 +344,24 @@ uint8_t get_alien_bullet_inflight(uint8_t bullet_number) {
 		return alien_bullet_2_inflight;
 	}
 
+}
+
+// returns the number of aliens still alive
+uint8_t get_aliens_still_alive() {
+	return alien_still_alive;
+}
+
+// sets how many aliens should still be alive
+void set_aliens_still_alive(uint8_t alive) {
+	alien_still_alive = alive;
+}
+
+// get's the index of the alien that just died
+uint8_t get_most_recent_alien_death() {
+	return alien_just_died_index;
+}
+
+// sets the index of the alien that just died.
+void set_most_recent_alien_death(uint8_t index) {
+	alien_just_died_index = index;
 }

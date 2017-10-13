@@ -163,7 +163,6 @@ void display_init() {
 	point_t block_pos = get_alien_block_position();
 	set_alien_right_column_edge(block_pos.x + ALIEN_BLOCK_WIDTH - ALIEN_WIDTH*2);
 	set_alien_left_column_edge(block_pos.x);
-	srand(time(NULL));   // should only be called once
 }
 
 //finishes initialization. kind of a misnomer, but don't really want to change it.
@@ -322,8 +321,10 @@ void kill_alien(uint8_t index) {
 	//hasn't already been killed
 	if (index >= NUM_ALIENS || alien_array[index] == 0) {return;}
 	alien_array[index] = 0;
-	alien_column = erase_alien(index);	//erase the alien that was killed
+
+	alien_column = display_erase_alien(index, get_alien_block_position());	//erase the alien that was killed
 	update_alien_edge(alien_column, index, alien_array);	//update the edges
+	set_aliens_still_alive(get_aliens_still_alive() - 1); // set global variable to one less then what it was
 }
 
 //erases the alien at the given index
@@ -336,13 +337,8 @@ void kill_alien(uint8_t index) {
 #define ROW_4_MULT 3
 #define ROW_5_MULT 4
 ///////////////////////////////////////
-uint16_t erase_alien(uint8_t alien_index) {
-	point_t curr_alien_pos = get_alien_block_position();
-	uint16_t y = 0;
-	uint16_t x = 0;
-	uint16_t alien_x = curr_alien_pos.x + (alien_index % NUM_COLUMNS) * DISTANCE_BETWEEN_ALIEN_COLUMNS;
-	uint16_t alien_y = curr_alien_pos.y;
 
+uint16_t calculate_alineY_pos(uint8_t alien_y, uint8_t alien_index) {
 	if(alien_index >= ROW_2 && alien_index < ROW_3) {
 	//if the alien is on the second row move y coord accordingly
 		alien_y += DISTANCE_BETWEEN_ALIEN_ROWS;
@@ -359,11 +355,43 @@ uint16_t erase_alien(uint8_t alien_index) {
 	//if the alien is on the fifth row move y coord accordingly
 		alien_y += DISTANCE_BETWEEN_ALIEN_ROWS * ROW_5_MULT;
 	}
+	return alien_y;
+}
+
+uint16_t display_erase_alien(uint8_t alien_index, point_t erase_alien_pos) {
+	uint16_t y = 0;
+	uint16_t x = 0;
+	uint16_t alien_x = erase_alien_pos.x + (alien_index % NUM_COLUMNS) * DISTANCE_BETWEEN_ALIEN_COLUMNS;
+	uint16_t alien_y = erase_alien_pos.y;
+
+	alien_y = calculate_alineY_pos(alien_y, alien_index);
 
 	//draws black over the alien that was killed
 	for (y = alien_y; y < alien_y + ALIEN_HEIGHT * DOUBLE_BITMAP; y++) {
 		for (x = alien_x; x < alien_x + ALIEN_BODY_WIDTH * DOUBLE_BITMAP; x++) {
 			draw_pixel(x, y, BACKGROUND_COLOR);
+		}
+	}
+	return alien_x;
+}
+
+uint16_t display_explode_alien(uint8_t alien_index, point_t explode_alien_pos) {
+
+	uint16_t y = 0;
+	uint16_t x = 0;
+	uint16_t alien_x = explode_alien_pos.x + (alien_index % NUM_COLUMNS) * DISTANCE_BETWEEN_ALIEN_COLUMNS;
+	uint16_t alien_y = explode_alien_pos.y;
+	uint16_t want_to_draw_bit = 0;
+
+	alien_y = calculate_alineY_pos(alien_y, alien_index);
+
+	//draws black over the alien that was killed
+	for (y = alien_y; y < alien_y + ALIEN_HEIGHT * DOUBLE_BITMAP; y++) {
+		for (x = alien_x; x < alien_x + ALIEN_BODY_WIDTH * DOUBLE_BITMAP; x++) {
+			want_to_draw_bit = (alien_explosion_12x10[(y - alien_y) / DOUBLE_BITMAP] & (1 << (ALIEN_BODY_WIDTH - SMALL_OFFSET - ((x - alien_x) / DOUBLE_BITMAP))));
+			if (want_to_draw_bit) {
+				draw_pixel(x, y, DISPLAY_WHITE);
+			}
 		}
 	}
 	return alien_x;
@@ -694,6 +722,7 @@ uint8_t check_bullet_collision(uint16_t x, uint16_t y, uint8_t bullet_type){
 			erase_tank_bullet();
 			uint8_t alien_index = get_alien_index(x,y);
 			xil_printf("killing alien: %d\r\n", alien_index);
+			set_most_recent_alien_death(alien_index);
 			kill_alien(alien_index);
 			//draw_alien_death(alien_index);
 			return TRUE;

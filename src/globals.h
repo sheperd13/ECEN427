@@ -16,6 +16,7 @@
 #define OFF_SCREEN 1000
 #define BUNKER_BLOCKS 12	//number of bunker blocks
 #define NUM_ALIENS 55	//number of aliens
+#define INVALID_INDEX (NUM_ALIENS + 1)
 #define ALIEN_SPEED 5	//movement of aliens (pixels)
 #define TANK_START_POS 312	//starting x position of tank
 #define STARTING_LIVES 3	//starting lives
@@ -67,6 +68,12 @@ uint8_t* get_bunker(uint8_t bunker_number);
 
 //get alien array
 uint8_t* get_alien_array();
+
+// returns the number of aliens still alive
+uint8_t get_aliens_still_alive();
+
+// sets how many aliens should still be alive
+void set_aliens_still_alive(uint8_t alive);
 
 //get alien lives bits
 uint64_t get_alien_lives_bits();
@@ -151,5 +158,11 @@ uint8_t getLives();
 
 //set lives
 void setLives(uint8_t lives);
+
+// get's the index of the alien that just died
+uint8_t get_most_recent_alien_death();
+
+// sets the index of the alien that just died.
+void set_most_recent_alien_death(uint8_t index);
 
 #endif

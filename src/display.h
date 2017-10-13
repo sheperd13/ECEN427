@@ -88,7 +88,7 @@ void display_init();
 void kill_alien(uint8_t index);
 
 //erase alien at given index
-uint16_t erase_alien(uint8_t alien_index);
+uint16_t display_erase_alien(uint8_t alien_index, point_t curr_alien_pos);
 
 //draw pixel at given point to the given color
 void draw_pixel(uint16_t x, uint16_t y, uint32_t color);
@@ -127,5 +127,7 @@ void display_render();
 void erase_tank_bullet();
 
 void erase_alien_bullet(uint8_t bullet_num);
+
+uint16_t display_explode_alien(uint8_t alien_index, point_t curr_alien_pos);
 
 #endif /* DISPLAY_H_ */
