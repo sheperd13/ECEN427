@@ -112,6 +112,8 @@ void draw_tank();
 //degrades a whole bunker for lab 3
 void degrade_bunker(uint8_t bunker_number);
 
+void degrade_bunker_block(uint8_t* bunker, uint8_t block_num);
+
 //blacks out the whole screen for init purposes
 void display_black_screen();
 

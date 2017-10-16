@@ -284,6 +284,11 @@ void update_alien_edge(uint16_t alien_column, uint8_t index, uint8_t* alien_arra
 				set_max_alien_pos(get_max_alien_pos() + DISTANCE_BETWEEN_ALIEN_COLUMNS);
 				alien_column -= DISTANCE_BETWEEN_ALIEN_COLUMNS;
 				right_edge = get_alien_right_column_edge();
+				//if the edges pass each other then we know that there are no aliens left
+				//we could have a global next_level variable that will be set to true here.
+				if(right_edge < left_edge){
+					break;
+				}
 				index--;
 			}
 		}else if(alien_column == left_edge){ //else if alien died at the left edge
@@ -305,6 +310,11 @@ void update_alien_edge(uint16_t alien_column, uint8_t index, uint8_t* alien_arra
 				set_min_alien_pos(get_min_alien_pos() - DISTANCE_BETWEEN_ALIEN_COLUMNS);
 				alien_column += DISTANCE_BETWEEN_ALIEN_COLUMNS;
 				left_edge = get_alien_left_column_edge();
+				//if the edges pass each other then we know that there are no aliens left
+				//we could have a global next_level variable that will be set to true here.
+				if(right_edge < left_edge){
+					break;
+				}
 				index++;
 			}
 		}else{
@@ -647,21 +657,36 @@ void draw_bunkers() {
 //draws the tanks that depict available lives at top of screen
 //this function will be called initially and on tank death
 #define LIVES_TANK_GAP 45
+#define DRAW 1
+#define NO_DRAW 0
 void draw_lives_tanks(uint8_t num_lives){
 	uint32_t y = 0;
 	uint32_t x = 0;
 	uint32_t x_coor = LIVES_TANK_0_X;
 	uint32_t y_coor = LIVES_TANK_Y_POS;
+	uint8_t draw_tank = DRAW;
+	uint8_t i;
 
 	//for the input number of lives it draws the tanks
-	for(; num_lives > 0; num_lives--){
+	for(i = 0; i < STARTING_LIVES; i++){
+		//check if should draw tank
+		if(i >= num_lives){
+			draw_tank = NO_DRAW;
+		}
 		for (y = y_coor; y < y_coor + TANK_HEIGHT; y++) {
 			for (x = x_coor; x < x_coor + TANK_WIDTH; x++) {
 				if ((tank_30x16[(y - y_coor)] & (1 << (TANK_WIDTH - SMALL_OFFSET
 						- ((x - x_coor)))))) {
-					draw_pixel(x, y, TANK_COLOR); // frame 0 is red here.
+					//if we should draw the tank then draw it, if not then erase it.
+					//not super efficient, but this only draws every time the tank dies,
+					//which shouldn't be very often so it should be fine
+					if(draw_tank){
+						draw_pixel(x, y, TANK_COLOR);
+					}else{
+						draw_pixel(x, y, BACKGROUND_COLOR);
+					}
 				} else {
-					draw_pixel(x, y, BACKGROUND_COLOR); // frame 0 is black here.
+					draw_pixel(x, y, BACKGROUND_COLOR);
 				}
 			}
 		}
@@ -676,22 +701,23 @@ enum bullet_type{
 	tank_bullet
 };
 
+#define NUM_ALIEN_ROWS 5
 uint8_t get_alien_index(uint16_t x, uint16_t y){
 	point_t alien_block = get_alien_block_position();
 	uint16_t alien_block_x = alien_block.x;
 	uint16_t alien_block_y = alien_block.y;
 	uint16_t i, j;
 	//if x is first column
-	for(i = 0; i < 11; i++){
+	for(i = 0; i < NUM_COLUMNS; i++){
 		if (x >= alien_block_x + (i * DISTANCE_BETWEEN_ALIEN_COLUMNS) && x <= alien_block_x + (i * DISTANCE_BETWEEN_ALIEN_COLUMNS) + ALIEN_WIDTH * DOUBLE_BITMAP) {
-			for(j = 0; j < 5; j++){
+			for(j = 0; j < NUM_ALIEN_ROWS; j++){
 				if (y >= alien_block_y + (j * DISTANCE_BETWEEN_ALIEN_ROWS) && y <= alien_block_y + (j * DISTANCE_BETWEEN_ALIEN_ROWS) + ALIEN_HEIGHT * DOUBLE_BITMAP) {
-					return (i + (j * 11));
+					return (i + (j * NUM_COLUMNS));
 				}
 			}
 		}
 	}
-	xil_printf("should have found alien. This shoulnd't have printed oops\n\n\r");
+	//xil_printf("should have found alien. This shoulnd't have printed oops\n\n\r");
 	return 0;
 }
 
@@ -706,10 +732,23 @@ uint8_t get_bunker_index(uint16_t x){
 	return -1;
 }
 
+#define BB_COLS 4 //number of columns of bunker blocks
+#define BB_ROWS 3 //number of rows of bunker blocks
 uint8_t get_bunker_block_index(uint16_t x, uint16_t y){
 	uint8_t bunker_num = get_bunker_index(x);
-
-	return 0;
+	uint16_t bunker_x_pos = BUNKER_0_X + (bunker_num * (BUNKER_GAP + BUNKER_WIDTH * DOUBLE_BITMAP));
+	uint8_t i, j;
+	for(i = 0; i < BB_COLS; i++){
+		if(x >= bunker_x_pos + (i * BB_WIDTH * DOUBLE_BITMAP) && x < bunker_x_pos + ((i + 1) * BB_WIDTH * DOUBLE_BITMAP)){
+			for(j = 0; j < BB_ROWS; j++){
+				if(y >= BUNKER_Y_POS + (j * BB_HEIGHT * DOUBLE_BITMAP) && y < BUNKER_Y_POS + (j + 1) * BB_HEIGHT * DOUBLE_BITMAP){
+					//xil_printf("BB Index: %d\r\n", (i + (j * BB_COLS)));
+					return (i + (j * BB_COLS));
+				}
+			}
+		}
+	}
+	return -1;
 }
 
 //TODO
@@ -721,16 +760,18 @@ uint8_t check_bullet_collision(uint16_t x, uint16_t y, uint8_t bullet_type){
 		if(color == ALIEN_COLOR){
 			erase_tank_bullet();
 			uint8_t alien_index = get_alien_index(x,y);
-			xil_printf("killing alien: %d\r\n", alien_index);
+			//xil_printf("killing alien: %d\r\n", alien_index);
 			set_most_recent_alien_death(alien_index);
 			kill_alien(alien_index);
 			//draw_alien_death(alien_index);
 			return TRUE;
 		}else if(color == BUNKER_COLOR){
 			//degrade_bunker
-			uint8_t bunker = get_bunker_index(x);
-			xil_printf("hit bunker: %d\r\n",bunker);
 			erase_tank_bullet();
+			uint8_t bunker = get_bunker_index(x);
+			degrade_bunker_block(get_bunker(bunker), get_bunker_block_index(x,y));
+			draw_bunker_block(bunker, get_bunker_block_index(x,y));
+			//xil_printf("hit bunker: %d\r\n",bunker);
 			return TRUE;
 		}else if(color == RED_GUY_COLOR){
 			//kill red guy
@@ -742,12 +783,19 @@ uint8_t check_bullet_collision(uint16_t x, uint16_t y, uint8_t bullet_type){
 			if(y >= TANK_Y_POS){
 			//if hit tank
 				//kill tank
+				uint8_t cur_lives = getLives();
+				cur_lives--;
+				setLives(cur_lives);
+				draw_lives_tanks(cur_lives);
 				erase_alien_bullet(bullet_type);
 				return TRUE;
 			}else{
 			//else you hit bunker
 				//degrade bunker
 				erase_alien_bullet(bullet_type);
+				uint8_t bunker = get_bunker_index(x);
+				degrade_bunker_block(get_bunker(bunker), get_bunker_block_index(x,y));
+				draw_bunker_block(bunker, get_bunker_block_index(x,y));
 				return TRUE;
 			}
 		}
@@ -763,7 +811,7 @@ void draw_tank_bullet(uint16_t bullet_x, uint16_t bullet_y, uint8_t first_time) 
 	uint16_t x = 0;
 
 	//draws the bullet and erases below the bullet so long as first time != 0
-	for (y = bullet_y; y <= bullet_y + TANK_BULLET_HEIGHT * DOUBLE_BITMAP + BULLET_SPEED; y++) {
+	for (y = bullet_y + TANK_BULLET_HEIGHT * DOUBLE_BITMAP + BULLET_SPEED; y >= bullet_y; y--) {
 		for (x = bullet_x; x < bullet_x + TANK_BULLET_WIDTH * DOUBLE_BITMAP; x++) {
 			if (y > bullet_y + TANK_BULLET_HEIGHT * DOUBLE_BITMAP && first_time == 0) { // if y is greater than the button of the bullet and is already in flight
 				draw_pixel(x, y, BACKGROUND_COLOR);
@@ -823,7 +871,6 @@ void draw_alien_bullet1(uint16_t bullet_x, uint16_t bullet_y, uint8_t first_time
 				}
 				if (y > bullet_y && (cross_bullet_1_3x5[(y - bullet_y) / DOUBLE_BITMAP] & (1 << (ALIEN_BULLET_WIDTH - SMALL_OFFSET - ((x - bullet_x) / DOUBLE_BITMAP))))) {
 					if(check_bullet_collision(x,y,bullet_number)) {
-						xil_printf("we hit something with cross bullet\n\r");
 						return;
 					}
 					draw_pixel(x, y, BULLET_COLOR);
@@ -847,7 +894,6 @@ void draw_alien_bullet1(uint16_t bullet_x, uint16_t bullet_y, uint8_t first_time
 				}
 				if (y > bullet_y && (cross_bullet_2_3x5[(y - bullet_y) / DOUBLE_BITMAP] & (1 << (ALIEN_BULLET_WIDTH - SMALL_OFFSET - ((x - bullet_x) / DOUBLE_BITMAP))))) {
 					if(check_bullet_collision(x,y,bullet_number)) {
-						xil_printf("we hit something with cross bullet\n\r");
 						return; }
 					draw_pixel(x, y, BULLET_COLOR);
 				}

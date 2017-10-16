@@ -235,13 +235,13 @@ void game_tick(uint32_t btn) {
 				set_most_recent_alien_death(INVALID_INDEX);
 				//display_erase_alien(alien_death_index, curr_alien_pos);
 				display_explode_alien(alien_death_index, alien_pos);
-				printf("An alien died with index of (%d, %d)!\n\r",alien_pos.x, alien_pos.y );
+				//printf("An alien died with index of (%d, %d)!\n\r",alien_pos.x, alien_pos.y );
 				start_alien_explosion_counter = TRUE;
 
 			}
 			if (alien_explosion_counter >= alien_explosion_counter_val) {
 				display_erase_alien(alien_death_index, alien_pos);
-				printf("after explosion, erased with index of (%d, %d)!\n\r",alien_pos.x, alien_pos.y );
+				//printf("after explosion, erased with index of (%d, %d)!\n\r",alien_pos.x, alien_pos.y );
 				start_alien_explosion_counter = FALSE;
 				alien_explosion_counter = 0;
 			}
@@ -345,7 +345,7 @@ void control() {
 	case '2':
 	//kill aliens. this will wait for a two digit input (00-54) and will
 	//kill the alien on the screen that corresponds to the input value
-		printf("at this point, we shouldn't have hit case 2 on keyboard");
+		//printf("at this point, we shouldn't have hit case 2 on keyboard");
 		//for each digit input compute the integer value
 		for (temp = 0; temp < KILL_ALIEN_DIGITS; temp++) {
 			k = getchar();
