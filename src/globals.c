@@ -54,12 +54,27 @@ static uint16_t alien_bullet_1_positionY;
 static uint16_t alien_bullet_2_positionX;
 static uint16_t alien_bullet_2_positionY;
 
+// the total score kept between all games
+static uint16_t total_score;
+
+static uint8_t aliens_dead = 0;
+
 //gives an initial value to the tank and alien block
 void init_pos(){
 	alienBlockPosition.x = ALIEN_BLOCK_START_X;
 	alienBlockPosition.y = ALIEN_BLOCK_START_Y;
 	tankPosition = TANK_START_POS;
 	red_guy_pos = OFF_SCREEN;
+	set_aliens_dead(FALSE);
+}
+
+void set_aliens_dead(uint8_t dead) {
+	aliens_dead = dead;
+}
+
+//returns alien direction
+uint8_t get_aliens_dead() {
+	return aliens_dead;
 }
 
 //returns alien direction
@@ -151,6 +166,11 @@ void globals_init(){
 	init_alien_array();
 	lives = STARTING_LIVES;
 	init_pos();
+	total_score = 0;
+	tank_bullet_inflight = 0;
+	alien_bullet_0_inflight = 0;
+	alien_bullet_1_inflight = 0;
+	alien_bullet_2_inflight = 0;
 }
 
 //returns the alien array
@@ -364,4 +384,12 @@ uint8_t get_most_recent_alien_death() {
 // sets the index of the alien that just died.
 void set_most_recent_alien_death(uint8_t index) {
 	alien_just_died_index = index;
+}
+
+void set_score(uint16_t score) {
+	total_score = score;
+}
+
+uint16_t get_score() {
+	return total_score;
 }

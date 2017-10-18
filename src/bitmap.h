@@ -16,6 +16,7 @@
 
 #define SCORE_HEIGHT 5
 #define SCORE_WIDTH 30
+#define SCORE_SCORE_WIDTH 6
 #define LIVES_HEIGHT 5
 #define LIVES_WIDTH 24
 #define ALIEN_HEIGHT 8
@@ -128,13 +129,13 @@ packword6(1,0,0,0,1,0),
 packword6(0,1,1,1,0,0)
 };
 
-static const uint32_t one_2x5[] =
+static const uint32_t one_6x5[] =
 {
-packword2(1,0),
-packword2(1,0),
-packword2(1,0),
-packword2(1,0),
-packword2(1,0)
+packword6(1,0,0,0,0,0),
+packword6(1,0,0,0,0,0),
+packword6(1,0,0,0,0,0),
+packword6(1,0,0,0,0,0),
+packword6(1,0,0,0,0,0)
 };
 
 static const uint32_t two_6x5[] =
@@ -167,7 +168,7 @@ packword6(0,0,0,1,0,0)
 static const uint32_t five_6x5[] =
 {
 packword6(1,1,1,1,1,0),
-packword6(1,0,0,1,0,0),
+packword6(1,0,0,0,0,0),
 packword6(1,1,1,1,0,0),
 packword6(0,0,0,0,1,0),
 packword6(1,1,1,1,0,0)
@@ -359,6 +360,31 @@ packword15(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
 packword15(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
 packword15(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1)
 };
+
+static const uint32_t tank_explosion_1_15x8[] =
+{
+packword15(0,1,0,0,0,0,0,0,0,1,0,0,0,0,0),
+packword15(1,0,1,0,0,0,1,0,0,0,0,1,0,1,0),
+packword15(0,1,0,1,0,0,0,0,0,0,1,0,0,1,0),
+packword15(0,0,0,0,0,1,0,1,1,0,1,0,0,0,0),
+packword15(1,0,0,1,1,1,1,1,1,1,1,1,1,0,0),
+packword15(0,1,1,1,1,1,1,1,1,1,1,1,1,1,0),
+packword15(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
+packword15(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1)
+};
+
+static const uint32_t tank_explosion_2_15x8[] =
+{
+packword15(1,0,0,0,0,0,0,0,0,0,1,0,0,0,0),
+packword15(0,0,0,1,0,0,0,0,0,0,0,0,1,0,0),
+packword15(1,0,1,0,1,0,0,0,0,0,0,1,0,0,1),
+packword15(0,0,0,0,0,1,1,1,1,1,1,0,0,0,0),
+packword15(0,0,1,1,1,1,1,1,1,1,1,1,1,0,0),
+packword15(0,1,1,1,1,1,1,1,1,1,1,1,1,1,0),
+packword15(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1),
+packword15(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1)
+};
+
 
 static const uint32_t tank_30x16[] =
 {

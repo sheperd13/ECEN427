@@ -39,6 +39,9 @@ void init_bunker_state();
 //definition of a point
 typedef struct {uint16_t x; uint16_t y;} point_t;
 
+void set_aliens_dead(uint8_t dead);
+uint8_t get_aliens_dead();
+
 //sets saucer position
 void set_red_guy_pos(uint16_t red_guy_x);
 
@@ -164,5 +167,9 @@ uint8_t get_most_recent_alien_death();
 
 // sets the index of the alien that just died.
 void set_most_recent_alien_death(uint8_t index);
+
+void set_score(uint16_t score);
+
+uint16_t get_score();
 
 #endif

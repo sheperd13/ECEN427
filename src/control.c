@@ -24,6 +24,10 @@
 #define BTN_UP_MASK 0x10
 #define BTN_RIGHT_LEFT_MASK 0x0A
 
+#define ALIEN_TOP_SCORE 40
+#define ALIEN_MIDDLE_SCORE 20
+#define ALIEN_BOTTOM_SCORE 10
+
 // Change to increase/decrease speed
 #define ALIEN_INIT_MAX_COUNTER_VAL 65 	// This is initial speed of aliens at start of game.
 										// Increase to slow down.
@@ -35,6 +39,7 @@
 #define TANK_BULLET_SPEED_VAL 5 // Increase to slow down tank bullet speed
 
 #define TANK_MOVE_SPEED_VAL 2 // Increase to slow down tank
+#define TANK_DEAD_VAL 80
 
 #define ALIEN_EXPLOSION_VAL 10
 
@@ -42,6 +47,7 @@ enum game_st_t {
 	init_st,
 	start_screen_st,
 	resume_game_st,
+	dead_tank_st,
 	game_over_st
 } currentState = init_st;
 
@@ -66,6 +72,8 @@ static uint8_t alien_bullet_speed_counter_max = UNIVERSAL_BULLET_SPEED_VAL;
 static uint8_t bullet_number = 0;
 
 uint8_t tank_move_speed_counter = 0;
+uint8_t tank_dead_counter = 0;
+uint8_t tank_lives;
 
 enum object_type {tank, bunker, alien, saucer};
 
@@ -192,11 +200,114 @@ void update_bullets() {
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 }
 
+void game_running(uint32_t btn) {
+	if (get_most_recent_alien_death() < INVALID_INDEX) {
+		alien_pos = get_alien_block_position();
+		alien_death_index = get_most_recent_alien_death();
+		if (alien_death_index < ROW_2) {
+			set_score(get_score() + ALIEN_TOP_SCORE);
+		}
+		else if (alien_death_index >= ROW_2 && alien_death_index < ROW_4) {
+			set_score(get_score() + ALIEN_MIDDLE_SCORE);
+		}
+		else {
+			set_score(get_score() + ALIEN_BOTTOM_SCORE);
+		}
+		display_draw_score(get_score());
+
+		set_most_recent_alien_death(INVALID_INDEX);
+		//display_erase_alien(alien_death_index, curr_alien_pos);
+		display_explode_alien(alien_death_index, alien_pos);
+		//printf("An alien died with index of (%d, %d)!\n\r",alien_pos.x, alien_pos.y );
+		start_alien_explosion_counter = TRUE;
+
+	}
+	if (alien_explosion_counter >= alien_explosion_counter_val) {
+		display_erase_alien(alien_death_index, alien_pos);
+		//printf("after explosion, erased with index of (%d, %d)!\n\r",alien_pos.x, alien_pos.y );
+		start_alien_explosion_counter = FALSE;
+		alien_explosion_counter = 0;
+	}
+	// Moves and updates the aliens
+	if (alien_speed_curr_counter_val >= alien_speed_max_counter_val) {
+		move_aliens();
+		draw_aliens();
+		//alien_speed_max_counter_val = get_aliens_still_alive() + 10;
+		alien_speed_curr_counter_val = 0;
+	}
+	// the frequency the aliens shoot their bullets
+	if (alien_bullet_rate_counter >= alien_bullet_rate_counter_max) {
+		if (bullet_number > ALIEN_BULLET_2) {
+		//if we have the max number of alien bullets on screen, then
+		//try to shoot bullet 0 again
+			bullet_number = 0;
+		}
+		shoot_alien_bullet(bullet_number);	//shoots the bullet
+		bullet_number++;
+		alien_bullet_rate_counter_max = rand() % ALIEN_BULLET_FREQ + ALIEN_BULLET_MIN_WAIT;
+		alien_bullet_rate_counter = 0;
+	}
+	// Tank shoots
+	if ((btn & BTN_CENTER_MASK) == BTN_CENTER_MASK) {
+		shoot_tank_bullet();
+	}
+	// Moves the bullets and updates them
+	if (alien_bullet_speed_counter >= alien_bullet_speed_counter_max) {
+		update_bullets();
+		draw_bullets();
+		alien_bullet_speed_counter = 0;
+	}
+	if ((btn & BTN_DOWN_MASK) == BTN_DOWN_MASK) {
+		cleanup_platform();	//cleanup
+		exit(0);
+	}
+
+	if ((btn & BTN_RIGHT_MASK) == BTN_RIGHT_MASK) {
+		if (tank_move_speed_counter >= TANK_MOVE_SPEED_VAL) {
+			move_tank_right();
+			draw_tank();
+			tank_move_speed_counter = 0;
+		}
+		else {
+			tank_move_speed_counter++;
+		}
+	}
+	else if ((btn & BTN_LEFT_MASK) == BTN_LEFT_MASK) {
+		if (tank_move_speed_counter >= TANK_MOVE_SPEED_VAL) {
+			move_tank_left();
+			draw_tank();
+			tank_move_speed_counter = 0;
+		}
+		else {
+			tank_move_speed_counter++;
+		}
+	}
+
+	if (tank_lives > getLives()) {
+		currentState = dead_tank_st;
+		tank_dead_counter = 0;
+		tank_lives = getLives();
+	}
+
+	if(get_aliens_dead()){
+		currentState = game_over_st;
+	}
+
+	if(((get_alien_block_position().y + ALIEN_BLOCK_HEIGHT) > (BUNKER_Y_POS + BUNKER_HEIGHT * DOUBLE_BITMAP))){
+		currentState = game_over_st;
+	}
+}
+
 void game_tick(uint32_t btn) {
 
+	//moore
 	switch(currentState) {
 		case init_st:
-			srand(522);
+			display_black_screen();
+			globals_init();
+			init_stuff();
+			tank_lives = getLives();
+			srand(997);
 			break;
 		case start_screen_st:
 			break;
@@ -208,17 +319,19 @@ void game_tick(uint32_t btn) {
 				alien_explosion_counter++;
 			}
 			break;
+		case dead_tank_st:
+			tank_dead_counter++;
+			display_draw_tank_death(tank_dead_counter % 2);
+			break;
 		case game_over_st:
 			break;
 		default:
 			break;
 	}
 
-	//transitions
+	//transitions/mealy
 	switch(currentState) {
 		case init_st:
-			display_black_screen();
-			printf("\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n\r----------READY------------------\n\r@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n\r");
 			currentState = start_screen_st;
 			break;
 		case start_screen_st:
@@ -229,79 +342,22 @@ void game_tick(uint32_t btn) {
 			}
 			break;
 		case resume_game_st:
-			if (get_most_recent_alien_death() < INVALID_INDEX) {
-				alien_pos = get_alien_block_position();
-				alien_death_index = get_most_recent_alien_death();
-				set_most_recent_alien_death(INVALID_INDEX);
-				//display_erase_alien(alien_death_index, curr_alien_pos);
-				display_explode_alien(alien_death_index, alien_pos);
-				//printf("An alien died with index of (%d, %d)!\n\r",alien_pos.x, alien_pos.y );
-				start_alien_explosion_counter = TRUE;
-
+			game_running(btn);
+			break;
+		case dead_tank_st:
+			if (tank_dead_counter >= TANK_DEAD_VAL) {
+				tank_dead_counter = 0;
+				draw_tank();
+				currentState = resume_game_st;
 			}
-			if (alien_explosion_counter >= alien_explosion_counter_val) {
-				display_erase_alien(alien_death_index, alien_pos);
-				//printf("after explosion, erased with index of (%d, %d)!\n\r",alien_pos.x, alien_pos.y );
-				start_alien_explosion_counter = FALSE;
-				alien_explosion_counter = 0;
+			if(getLives() == 0){
+				currentState = game_over_st;
 			}
-			// Moves and updates the aliens
-			if (alien_speed_curr_counter_val >= alien_speed_max_counter_val) {
-				move_aliens();
-				draw_aliens();
-				alien_speed_max_counter_val = get_aliens_still_alive() + 10;
-				alien_speed_curr_counter_val = 0;
-			}
-			// the frequency the aliens shoot their bullets
-			if (alien_bullet_rate_counter >= alien_bullet_rate_counter_max) {
-				if (bullet_number > ALIEN_BULLET_2) {
-				//if we have the max number of alien bullets on screen, then
-				//try to shoot bullet 0 again
-					bullet_number = 0;
-				}
-				shoot_alien_bullet(bullet_number);	//shoots the bullet
-				bullet_number++;
-				alien_bullet_rate_counter_max = rand() % ALIEN_BULLET_FREQ + ALIEN_BULLET_MIN_WAIT;
-				alien_bullet_rate_counter = 0;
-			}
-			// Tank shoots
-			if ((btn & BTN_CENTER_MASK) == BTN_CENTER_MASK) {
-				shoot_tank_bullet();
-			}
-			// Moves the bullets and updates them
-			if (alien_bullet_speed_counter >= alien_bullet_speed_counter_max) {
-				update_bullets();
-				draw_bullets();
-				alien_bullet_speed_counter = 0;
-			}
-			if ((btn & BTN_DOWN_MASK) == BTN_DOWN_MASK) {
-				cleanup_platform();	//cleanup
-				exit(0);
-			}
-
-			if ((btn & BTN_RIGHT_MASK) == BTN_RIGHT_MASK) {
-				if (tank_move_speed_counter >= TANK_MOVE_SPEED_VAL) {
-					move_tank_right();
-					draw_tank();
-					tank_move_speed_counter = 0;
-				}
-				else {
-					tank_move_speed_counter++;
-				}
-			}
-			else if ((btn & BTN_LEFT_MASK) == BTN_LEFT_MASK) {
-				if (tank_move_speed_counter >= TANK_MOVE_SPEED_VAL) {
-					move_tank_left();
-					draw_tank();
-					tank_move_speed_counter = 0;
-				}
-				else {
-					tank_move_speed_counter++;
-				}
-			}
-
 			break;
 		case game_over_st:
+			if((btn & BTN_UP_MASK) == BTN_UP_MASK){
+				currentState = init_st;
+			}
 			break;
 		default:
 			break;

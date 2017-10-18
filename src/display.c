@@ -13,6 +13,7 @@
 #define DEGRADE_BUNKER_BY_1 1
 #define RAND_LIMIT_4_BULLET_TYPE 2
 #define draw_pixel(x, y, c) framePointer0[y * SCREEN_WIDTH + x] = c;	//macro for drawing to screen
+#define SCORE_ARRAY_SIZE 5
 
 
 static uint8_t legs_in; //aliens in/out legs
@@ -96,6 +97,15 @@ void draw_bottom_line() {
 	}
 }
 
+void init_stuff(){
+	curr_tank_pos = getTankPositionGlobal();
+	set_max_alien_pos(SCREEN_WIDTH-ALIEN_BLOCK_WIDTH-ALIEN_SPEED);
+	set_min_alien_pos(ALIEN_SPEED);
+	point_t block_pos = get_alien_block_position();
+	set_alien_right_column_edge(block_pos.x + ALIEN_BLOCK_WIDTH - ALIEN_WIDTH*2);
+	set_alien_left_column_edge(block_pos.x);
+}
+
 //initializes the display and preps it for use. It also gives values to the display globals.
 //most of this code is from the VDMA test provided in lab materials
 void display_init() {
@@ -157,13 +167,91 @@ void display_init() {
 			XAXIVDMA_READ, myFrameBuffer.FrameStoreStartAddr)) {
 		xil_printf("DMA Set Address Failed Failed\r\n");
 	}
-	curr_tank_pos = getTankPositionGlobal();
-	set_max_alien_pos(SCREEN_WIDTH-ALIEN_BLOCK_WIDTH-ALIEN_SPEED);
-	set_min_alien_pos(ALIEN_SPEED);
-	point_t block_pos = get_alien_block_position();
-	set_alien_right_column_edge(block_pos.x + ALIEN_BLOCK_WIDTH - ALIEN_WIDTH*2);
-	set_alien_left_column_edge(block_pos.x);
 }
+
+// grabs each of the digits in score and places inside score_array in reverse order.
+// the reason for reverse is that "score mod 10" takes the least significant digit
+// first.
+void grab_digits(int8_t score_array[SCORE_ARRAY_SIZE], uint16_t score) {
+	int8_t score_index = SCORE_ARRAY_SIZE - SMALL_OFFSET;
+	uint8_t digit = 0;
+	while (score || score_index == -1) {
+		digit = score % 10;
+		score_array[score_index] = digit;
+		score_index--;
+		score /= 10;
+	}
+}
+
+
+// draws the score onto the screen in the top left corner
+void display_draw_score(uint16_t score) {
+	uint32_t y = 0;
+	uint32_t x = 0;
+	uint32_t x_coor = SCORE_SCORE_X + SCORE_SCORE_WIDTH;
+	uint32_t y_coor = SCORE_Y_POS;
+	uint8_t i = 0;
+	int8_t digit;
+	uint8_t want_to_draw_bit = 0;
+	int8_t score_array[SCORE_ARRAY_SIZE] = {-1, -1, -1, -1, 0}; // init to all invalid score
+	uint32_t* bitmap;
+
+
+	grab_digits(score_array, score);
+
+	for (i = 0; i < SCORE_ARRAY_SIZE; i++) {
+		digit = score_array[i];
+
+		switch (digit) {
+		case 0:
+			bitmap = (uint32_t*) zero_6x5;
+			break;
+		case 1:
+			bitmap = (uint32_t*) one_6x5;
+			break;
+		case 2:
+			bitmap = (uint32_t*) two_6x5;
+			break;
+		case 3:
+			bitmap = (uint32_t*) three_6x5;
+			break;
+		case 4:
+			bitmap = (uint32_t*) four_6x5;
+			break;
+		case 5:
+			bitmap = (uint32_t*) five_6x5;
+			break;
+		case 6:
+			bitmap = (uint32_t*) six_6x5;
+			break;
+		case 7:
+			bitmap = (uint32_t*) seven_6x5;
+			break;
+		case 8:
+			bitmap = (uint32_t*) eight_6x5;
+			break;
+		case 9:
+			bitmap = (uint32_t*) nine_6x5;
+			break;
+		default:
+			continue;
+		}
+
+		for (y = y_coor; y < y_coor + SCORE_HEIGHT * DOUBLE_BITMAP; y++) {
+			for (x = x_coor; x < x_coor + SCORE_SCORE_WIDTH * DOUBLE_BITMAP; x++) {
+				want_to_draw_bit = (bitmap[(y - y_coor) / DOUBLE_BITMAP] & (1 << (SCORE_SCORE_WIDTH - SMALL_OFFSET - ((x - x_coor) / DOUBLE_BITMAP))));
+				if (want_to_draw_bit) {
+					draw_pixel(x, y, DISPLAY_GREEN);
+				}
+				else {
+					draw_pixel(x, y, DISPLAY_BLACK);
+				}
+			}
+		}
+		x_coor += SCORE_SCORE_WIDTH * DOUBLE_BITMAP;
+	}
+}
+
 
 //finishes initialization. kind of a misnomer, but don't really want to change it.
 //This is also provided in the VDMA test.
@@ -287,6 +375,7 @@ void update_alien_edge(uint16_t alien_column, uint8_t index, uint8_t* alien_arra
 				//if the edges pass each other then we know that there are no aliens left
 				//we could have a global next_level variable that will be set to true here.
 				if(right_edge < left_edge){
+					set_aliens_dead(TRUE);
 					break;
 				}
 				index--;
@@ -313,6 +402,7 @@ void update_alien_edge(uint16_t alien_column, uint8_t index, uint8_t* alien_arra
 				//if the edges pass each other then we know that there are no aliens left
 				//we could have a global next_level variable that will be set to true here.
 				if(right_edge < left_edge){
+					set_aliens_dead(TRUE);
 					break;
 				}
 				index++;
@@ -339,10 +429,6 @@ void kill_alien(uint8_t index) {
 
 //erases the alien at the given index
 //#defines for erase_alien()///////////
-#define ROW_2 11
-#define ROW_3 22
-#define ROW_4 33
-#define ROW_5 44
 #define ROW_3_MULT 2
 #define ROW_4_MULT 3
 #define ROW_5_MULT 4
@@ -1247,4 +1333,31 @@ void display_render() {
 	draw_tank();
 	draw_lives_tanks(getLives());
 	initializing = 0;
+}
+
+void display_draw_tank_death(uint8_t guise) {
+	uint16_t y = 0;
+	uint16_t x = 0;
+	uint16_t x_coor = getTankPositionGlobal();
+	uint16_t y_coor = TANK_Y_POS;
+	uint32_t* bitmap;
+	uint16_t want_to_draw_bit = 0;
+
+	if (guise) {
+		bitmap = (uint32_t*) tank_explosion_1_15x8;
+	}
+	else {
+		bitmap = (uint32_t*) tank_explosion_2_15x8;
+	}
+	for (y = y_coor; y < y_coor + TANK_HEIGHT; y++) {
+		for (x = x_coor; x < x_coor + TANK_WIDTH; x++) {
+			want_to_draw_bit = (bitmap[(y - y_coor) / DOUBLE_BITMAP] & (1 << ((TANK_WIDTH/DOUBLE_BITMAP) - SMALL_OFFSET - ((x - x_coor) / DOUBLE_BITMAP))));
+			//xil_printf("want_to_draw_bit: %d\r\n",want_to_draw_bit);
+			if (want_to_draw_bit) {
+				draw_pixel(x, y, TANK_COLOR);
+			} else {
+				draw_pixel(x, y, BACKGROUND_COLOR);
+			}
+		}
+	}
 }

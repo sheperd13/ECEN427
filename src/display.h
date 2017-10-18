@@ -26,6 +26,7 @@
 #define TOP_SCREEN_PLAYABLE_AREA (LIVES_TANK_Y_POS + TANK_HEIGHT)	//the space occupied by score and lives
 #define SCORE_X_POS 7	//x pos of score text
 #define SCORE_Y_POS 10	//y pos of score text
+#define SCORE_SCORE_X (SCORE_X_POS + SCORE_WIDTH * DOUBLE_BITMAP + 2 ) // the starting point of the score numbers. 2 is small gap
 #define LIVES_X_POS 330	//x pos of lives text
 #define LIVES_Y_POS 10	//y pos of lives text
 #define LIVES_TANK_Y_POS 4	//y pos of lives tanks
@@ -46,6 +47,7 @@
 #define TANK_Y_POS 415	//tank y pos
 #define ALIEN_DOWN_SPEED 10	//number of pixel aliens move down
 #define ALIEN_BLOCK_WIDTH (ALIEN_WIDTH * 2 * 11 + ALIEN_SPEED * 10) //width of the block of aliens
+#define ALIEN_BLOCK_HEIGHT (DISTANCE_BETWEEN_ALIEN_ROWS * 5 - 14)
 #define ALIEN_COLOR DISPLAY_WHITE	//alien color
 #define ALIEN_BULLET_COLOR DISPLAY_WHITE	//alien bullet color
 #define TANK_COLOR DISPLAY_GREEN	//tank color
@@ -76,6 +78,11 @@
 #define ALIEN_BULLET_WIDTH 3	//alien bullet width
 #define BULLET_COLOR DISPLAY_WHITE	//bullet_color
 
+#define ROW_2 11
+#define ROW_3 22
+#define ROW_4 33
+#define ROW_5 44
+
 #define IS_TANK_BULLET 1
 
 
@@ -83,6 +90,8 @@ uint8_t check_bullet_collision(uint16_t x, uint16_t y, uint8_t bullet_type);
 
 //initializes display prepping it for use
 void display_init();
+
+void display_draw_score(uint16_t score);
 
 //kills alien at given index
 void kill_alien(uint8_t index);
@@ -131,5 +140,9 @@ void erase_tank_bullet();
 void erase_alien_bullet(uint8_t bullet_num);
 
 uint16_t display_explode_alien(uint8_t alien_index, point_t curr_alien_pos);
+
+void display_draw_tank_death(uint8_t guise);
+
+void init_stuff();
 
 #endif /* DISPLAY_H_ */
