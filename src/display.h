@@ -61,16 +61,16 @@
 #define BACKGROUND_COLOR DISPLAY_BLACK	//background color
 
 #define RED_GUY_COLOR DISPLAY_RED
-#define RED_GUY_Y_POS 35
-#define RED_GUY_LEFT_START_X (SCREEN_WIDTH - RED_GUY_WIDTH)
-#define RED_GUY_RIGHT_START_X 0
+#define RED_GUY_Y_POS 30
+#define RED_GUY_LEFT_START (0 - RED_GUY_WIDTH)
+#define RED_GUY_RIGHT_START SCREEN_WIDTH
 
 #define MIN_TANK_POS 0	//minimum tank position
 #define MAX_TANK_POS (SCREEN_WIDTH-TANK_WIDTH-TANK_SPEED)	//maximum tank position
 #define MAX_ALIEN_POS (SCREEN_WIDTH-ALIEN_BLOCK_WIDTH-ALIEN_SPEED)	//maximum alien position
 #define MIN_ALIEN_POS ALIEN_SPEED	//minimum alien position
 #define ALIEN_BLOCK_START_X (320 - (ALIEN_BLOCK_WIDTH/2))	//alien block starting x pos
-#define ALIEN_BLOCK_START_Y 50								//alien block starting y pos
+#define ALIEN_BLOCK_START_Y 60								//alien block starting y pos
 
 #define TANK_BULLET_HEIGHT 4	//tank bullet height
 #define TANK_BULLET_WIDTH 1		//tank bullet width
@@ -85,64 +85,90 @@
 
 #define IS_TANK_BULLET 1
 
-
-uint8_t check_bullet_collision(uint16_t x, uint16_t y, uint8_t bullet_type);
-
+//INIT FUNCTIONS//////////////////////////////////////////////
 //initializes display prepping it for use
 void display_init();
 
-void display_draw_score(uint16_t score);
+//inits stuff
+void init_stuff();
 
-//kills alien at given index
-void kill_alien(uint8_t index);
+//finishes display initialization
+void display_wrap_up();
 
-//erase alien at given index
-uint16_t display_erase_alien(uint8_t alien_index, point_t curr_alien_pos);
+//blacks out the whole screen for init purposes
+void display_black_screen();
+//END OF INIT FUNCTIONS///////////////////////////////////////
+
+
+
+//DRAW FUNCTIONS/////////////////////////////////////////////
+//draws all aliens to screen
+void draw_aliens();
+
+//draws death animation for aliens
+uint16_t display_explode_alien(uint8_t alien_index, point_t curr_alien_pos);
 
 //draw pixel at given point to the given color
 void draw_pixel(uint16_t x, uint16_t y, uint32_t color);
 
+//draws all bullets to screen
+void draw_bullets();
+
+void display_draw_score(uint16_t score);
+
+void display_draw_red_guy();
+
+//draws the tank
+void draw_tank();
+
+//draws the tank death animation
+void display_draw_tank_death(uint8_t guise);
+
+//render function that draws everything to the screen
+void display_render();
+//END OF DRAW FUNCTIONS///////////////////////////////////////
+
+
+
+//ERASE FUNCTIONS/////////////////////////////////////////////
+//erase alien at given index
+uint16_t display_erase_alien(uint8_t alien_index, point_t curr_alien_pos);
+
+//erase the red guy
+void display_erase_red_guy();
+
+//erase tank bullet
+void erase_tank_bullet();
+
+//erase alien bullet
+void erase_alien_bullet(uint8_t bullet_num);
+//END OF ERASE FUNCTIONS//////////////////////////////////////
+
+
+
+//SUPPORT FUNCTIONS///////////////////////////////////////////
+//checks what to do if a bullet has collided with something
+uint8_t check_bullet_collision(uint16_t x, uint16_t y, uint8_t bullet_type);
+
+//degrades a whole bunker for lab 3
+void degrade_bunker(uint8_t bunker_number);
+
+//degrades a given bunker block by 1 step
+void degrade_bunker_block(uint8_t* bunker, uint8_t block_num);
+
 //returns the color at specified point
 uint32_t find_pixel(uint16_t x, uint16_t y);
+
+//kills alien at given index
+void kill_alien(uint8_t index);
 
 //fires an alien bullet. bullet number is 0, 1, or 2. representing the number of alien
 //bullets on screen.
 void shoot_alien_bullet(uint8_t bullet_number);
 
-//firest a tank bullet
+//fires a tank bullet
 void shoot_tank_bullet();
+//END OF SUPPORT FUNCTIONS///////////////////////////////////////
 
-//draws all bullets to screen
-void draw_bullets();
-
-//draws the tank
-void draw_tank();
-
-//degrades a whole bunker for lab 3
-void degrade_bunker(uint8_t bunker_number);
-
-void degrade_bunker_block(uint8_t* bunker, uint8_t block_num);
-
-//blacks out the whole screen for init purposes
-void display_black_screen();
-
-//finishes display initialization
-void display_wrap_up();
-
-//draws all aliens to screen
-void draw_aliens();
-
-//render function that draws everything to the screen
-void display_render();
-
-void erase_tank_bullet();
-
-void erase_alien_bullet(uint8_t bullet_num);
-
-uint16_t display_explode_alien(uint8_t alien_index, point_t curr_alien_pos);
-
-void display_draw_tank_death(uint8_t guise);
-
-void init_stuff();
 
 #endif /* DISPLAY_H_ */

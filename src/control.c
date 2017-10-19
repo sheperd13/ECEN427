@@ -31,17 +31,21 @@
 // Change to increase/decrease speed
 #define ALIEN_INIT_MAX_COUNTER_VAL 65 	// This is initial speed of aliens at start of game.
 										// Increase to slow down.
-#define ALIEN_BULLET_MIN_WAIT 65 // This is the minimum that alien has to wait before shooting
-#define ALIEN_BULLET_FREQ 400	// Increase to get a wider range of wait times before alien shoots
+#define ALIEN_BULLET_MIN_WAIT 1 // This is the minimum that alien has to wait before shooting
+#define ALIEN_BULLET_FREQ 300	// Increase to get a wider range of wait times before alien shoots
 
 #define UNIVERSAL_BULLET_SPEED_VAL 3 // Increase to slow down bullet speeds if used
 #define ALIEN_BULLET_SPEED_VAL 5 // Increase to slow down alien bullet speed
 #define TANK_BULLET_SPEED_VAL 5 // Increase to slow down tank bullet speed
 
-#define TANK_MOVE_SPEED_VAL 2 // Increase to slow down tank
+#define TANK_MOVE_SPEED_VAL 0 // Increase to slow down tank
 #define TANK_DEAD_VAL 80
 
 #define ALIEN_EXPLOSION_VAL 10
+
+#define RED_GUY_VAL 1500
+#define RED_GUY_FREQ 2000
+#define RED_GUY_SPEED_VAL 2
 
 enum game_st_t {
 	init_st,
@@ -58,9 +62,6 @@ uint8_t start_alien_explosion_counter = FALSE;
 uint8_t alien_explosion_counter = 0;
 uint8_t alien_explosion_counter_val = ALIEN_EXPLOSION_VAL;
 
-uint8_t start_from_left;
-uint8_t red_guy_on_screen;
-
 uint8_t alien_speed_curr_counter_val = 0;
 uint8_t alien_speed_max_counter_val = ALIEN_INIT_MAX_COUNTER_VAL;
 
@@ -75,37 +76,48 @@ uint8_t tank_move_speed_counter = 0;
 uint8_t tank_dead_counter = 0;
 uint8_t tank_lives;
 
+uint8_t red_guy_on_screen;
+uint16_t red_guy_counter = 0;
+uint16_t red_guy_max_val = RED_GUY_VAL;
+uint16_t red_guy_speed_curr_counter_val = 0;
+
+uint8_t aliens_too_low = FALSE;
+
 enum object_type {tank, bunker, alien, saucer};
 
 void summon_red_guy() {
-	uint16_t red_guy_pos = get_red_guy_pos();
-	if (red_guy_pos == OFF_SCREEN) {
-		return;
-	}
-
-	start_from_left = !start_from_left;
-
-	if (start_from_left) {
-		set_red_guy_pos(RED_GUY_LEFT_START_X);
-	}
-	else { // starting on the right
-		set_red_guy_pos(RED_GUY_RIGHT_START_X);
-	}
+	uint8_t direction = get_red_guy_direction();
+	if(!red_guy_on_screen){
+		red_guy_on_screen = !red_guy_on_screen;
+		if(direction == RED_GUY_RIGHT){
+			set_red_guy_pos(RED_GUY_LEFT_START);
+		}else{
+			set_red_guy_pos(RED_GUY_RIGHT_START);
+		}
+	}else return;
 }
 
+#define DOUBLE_BITMAP 2
 void move_red_guy(){
 	//if moving right then move red guy right by RED_GUY_SPEED
 	int16_t cur_pos = (int16_t)get_red_guy_pos();
-	if(start_from_left){
-		if(cur_pos >= SCREEN_WIDTH){
-			set_red_guy_pos(OFF_SCREEN);
+	uint8_t direction = get_red_guy_direction();
+	if(red_guy_on_screen){
+		if(direction == RED_GUY_RIGHT){
+			set_red_guy_pos(cur_pos + RED_GUY_SPEED);
+			if(cur_pos >= SCREEN_WIDTH){
+				set_red_guy_pos(OFF_SCREEN);
+				set_red_guy_direction(!direction);
+				red_guy_on_screen = !red_guy_on_screen;
+			}
+		}else{
+			set_red_guy_pos(cur_pos - RED_GUY_SPEED);
+			if((int16_t)cur_pos < 0 - RED_GUY_WIDTH * DOUBLE_BITMAP){
+				set_red_guy_pos(OFF_SCREEN);
+				set_red_guy_direction(!direction);
+				red_guy_on_screen = !red_guy_on_screen;
+			}
 		}
-		set_red_guy_pos(cur_pos + RED_GUY_SPEED);
-	}else{
-		if(cur_pos <= 0){
-			set_red_guy_pos(OFF_SCREEN);
-		}
-		set_red_guy_pos(cur_pos - RED_GUY_SPEED);
 	}
 }
 
@@ -150,6 +162,9 @@ void move_aliens(){
 		set_aliens_direction(moving_direction); //change moving direction of aliens
 		cur_pos.y = cur_pos.y + ALIEN_DOWN_SPEED; //move the block position down
 		set_alien_block_position(cur_pos);		  //move the block position down
+		if(lowest_alien_y() > BUNKER_Y_POS + BUNKER_HEIGHT * DOUBLE_BITMAP){
+			aliens_too_low = TRUE;
+		}
 	}else if(moving_direction == ALIENS_MOVING_RIGHT){
 		//this one is pretty obvi. If they are moving right then move right
 		hit_end = FALSE;				//reset hit_end variable
@@ -232,7 +247,7 @@ void game_running(uint32_t btn) {
 	if (alien_speed_curr_counter_val >= alien_speed_max_counter_val) {
 		move_aliens();
 		draw_aliens();
-		//alien_speed_max_counter_val = get_aliens_still_alive() + 10;
+		alien_speed_max_counter_val = get_aliens_still_alive() + 10;
 		alien_speed_curr_counter_val = 0;
 	}
 	// the frequency the aliens shoot their bullets
@@ -293,8 +308,17 @@ void game_running(uint32_t btn) {
 		currentState = game_over_st;
 	}
 
-	if(((get_alien_block_position().y + ALIEN_BLOCK_HEIGHT) > (BUNKER_Y_POS + BUNKER_HEIGHT * DOUBLE_BITMAP))){
-		currentState = game_over_st;
+	if(red_guy_counter > red_guy_max_val){
+		red_guy_max_val = rand() % ALIEN_BULLET_FREQ + RED_GUY_VAL;
+		red_guy_counter = 0;
+		summon_red_guy();
+		display_draw_red_guy();
+	}
+
+	if(red_guy_speed_curr_counter_val > RED_GUY_SPEED && red_guy_on_screen){
+		move_red_guy();
+		display_draw_red_guy();
+		red_guy_speed_curr_counter_val = 0;
 	}
 }
 
@@ -307,6 +331,7 @@ void game_tick(uint32_t btn) {
 			globals_init();
 			init_stuff();
 			tank_lives = getLives();
+			aliens_too_low = FALSE;
 			srand(997);
 			break;
 		case start_screen_st:
@@ -315,6 +340,8 @@ void game_tick(uint32_t btn) {
 			alien_speed_curr_counter_val++;
 			alien_bullet_rate_counter++;
 			alien_bullet_speed_counter++;
+			red_guy_counter++;
+			red_guy_speed_curr_counter_val++;
 			if (start_alien_explosion_counter) {
 				alien_explosion_counter++;
 			}
@@ -343,6 +370,10 @@ void game_tick(uint32_t btn) {
 			break;
 		case resume_game_st:
 			game_running(btn);
+			if(aliens_too_low){
+				currentState = game_over_st;
+				xil_printf("Aliens too low.\r\nGame Over\r\n");
+			}
 			break;
 		case dead_tank_st:
 			if (tank_dead_counter >= TANK_DEAD_VAL) {

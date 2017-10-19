@@ -20,8 +20,10 @@
 #define ALIEN_SPEED 5	//movement of aliens (pixels)
 #define TANK_START_POS 312	//starting x position of tank
 #define STARTING_LIVES 3	//starting lives
-#define TANK_SPEED 5	//movement of tank (pixels)
-#define RED_GUY_SPEED 5	//saucer movement speed
+#define TANK_SPEED 2	//movement of tank (pixels)
+#define RED_GUY_SPEED 2	//saucer movement speed
+#define RED_GUY_RIGHT 1
+#define RED_GUY_LEFT 0
 #define BUNKER_HEALTH 4	//bunker health
 #define ALIENS_MOVING_RIGHT 1	//alien right movement
 #define ALIENS_MOVING_LEFT 0	//alien left movement
@@ -38,6 +40,15 @@ void init_bunker_state();
 
 //definition of a point
 typedef struct {uint16_t x; uint16_t y;} point_t;
+
+//returns the y position of the lowest living alien
+uint16_t lowest_alien_y();
+
+//gets red guy moving direction
+void set_red_guy_direction(uint8_t direction);
+
+//sets red guy moving direction
+uint8_t get_red_guy_direction();
 
 void set_aliens_dead(uint8_t dead);
 uint8_t get_aliens_dead();

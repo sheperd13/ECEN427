@@ -36,7 +36,9 @@ static uint16_t max_alien_pos;	//max alien position
 static uint16_t min_alien_pos;	//min alien position
 static uint16_t alien_right_column_edge;	//x position of the rightmost alien column
 static uint16_t alien_left_column_edge;		//x position of the leftmost alien column
-static uint16_t red_guy_pos;
+
+static uint16_t red_guy_pos; 		//x pos of the red guy
+static uint8_t red_guy_direction; 	//red guy is moving right or left
 
 //indicates which of the bullets are on screen
 static uint8_t tank_bullet_inflight = 0;
@@ -64,8 +66,23 @@ void init_pos(){
 	alienBlockPosition.x = ALIEN_BLOCK_START_X;
 	alienBlockPosition.y = ALIEN_BLOCK_START_Y;
 	tankPosition = TANK_START_POS;
-	red_guy_pos = OFF_SCREEN;
 	set_aliens_dead(FALSE);
+	set_red_guy_pos(OFF_SCREEN);
+}
+
+#define NUM_COLUMNS 11
+#define LAST_ROW 4
+#define ERROR_VAL 666
+uint16_t lowest_alien_y(){
+	uint8_t i,j;
+	for(i = LAST_ROW;; i--){
+		for(j = NUM_COLUMNS * i; j < NUM_COLUMNS * (i + 1); j++){
+			if(alien_array[j] == 1){
+				return get_alien_block_position().y + i * DISTANCE_BETWEEN_ALIEN_ROWS;
+			}
+		}
+	}
+	return ERROR_VAL;
 }
 
 void set_aliens_dead(uint8_t dead) {
@@ -75,6 +92,14 @@ void set_aliens_dead(uint8_t dead) {
 //returns alien direction
 uint8_t get_aliens_dead() {
 	return aliens_dead;
+}
+
+void set_red_guy_direction(uint8_t direction){
+	red_guy_direction = direction;
+}
+
+uint8_t get_red_guy_direction(){
+	return red_guy_direction;
 }
 
 //returns alien direction
@@ -171,6 +196,7 @@ void globals_init(){
 	alien_bullet_0_inflight = 0;
 	alien_bullet_1_inflight = 0;
 	alien_bullet_2_inflight = 0;
+	set_red_guy_direction(RED_GUY_RIGHT);
 }
 
 //returns the alien array

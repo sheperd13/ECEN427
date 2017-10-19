@@ -1,4 +1,5 @@
 #include "display.h"
+#include "globals.h"
 #include <time.h>
 #include <stdlib.h>
 
@@ -40,6 +41,65 @@ void display_black_screen() {
 	for (display_width = 0; display_width < SCREEN_WIDTH; display_width++) {
 		for (display_height = 0; display_height < SCREEN_HEIGHT; display_height++) {
 			draw_pixel(display_width, display_height, BACKGROUND_COLOR);
+		}
+	}
+}
+
+//draws the red guy on the screen
+void display_draw_red_guy(){
+	int16_t y = 0;
+	int16_t x = 0;
+	int16_t x_coor = (int16_t)get_red_guy_pos();
+	int16_t y_coor = RED_GUY_Y_POS;
+	uint8_t red_guy_direction = get_red_guy_direction();
+
+	// erases the trail behind the red guy after it moves/////////////
+	//if moving to the left then erase RED_GUY_SPEED to the right
+	if(red_guy_direction == RED_GUY_LEFT){
+		for (y = y_coor; y < y_coor + RED_GUY_HEIGHT; y++) {
+			for (x = x_coor + RED_GUY_WIDTH; x < x_coor + RED_GUY_WIDTH + RED_GUY_SPEED; x++) {
+				draw_pixel(x, y, BACKGROUND_COLOR);
+			}
+		}
+	}
+	//else if  moving to the right then erase RED_GUY_SPEED to the left
+	else{
+		for (y = y_coor; y < y_coor + RED_GUY_HEIGHT; y++) {
+			for (x = x_coor - RED_GUY_SPEED; x < x_coor; x++) {
+				draw_pixel(x, y, BACKGROUND_COLOR);
+			}
+		}
+	}
+	//////////////////////////////////////////////////////////////////
+
+	// draws the red guy
+	for (y = y_coor; y < y_coor + RED_GUY_HEIGHT; y++) {
+		for (x = x_coor; x < x_coor + RED_GUY_WIDTH; x++) {
+			if(x > 0 && x < SCREEN_WIDTH){
+				if ((red_guy_32x14[(y - y_coor)] & (1 << (RED_GUY_WIDTH - SMALL_OFFSET
+						- ((x - x_coor)))))) {
+					//should gradually draw him in
+					//if(find_pixel(x,y) != RED_GUY_COLOR){
+						draw_pixel(x, y, RED_GUY_COLOR);
+					//}
+				} else {
+					draw_pixel(x, y, BACKGROUND_COLOR);
+				}
+			}
+		}
+	}
+}
+
+void display_erase_red_guy(){
+	uint16_t y = 0;
+	uint16_t x = 0;
+	uint16_t alien_x = get_red_guy_pos();
+	uint16_t alien_y = RED_GUY_Y_POS;
+
+	//draws black over the red guy that was killed
+	for (y = alien_y; y < alien_y + RED_GUY_HEIGHT; y++) {
+		for (x = alien_x; x < alien_x + RED_GUY_WIDTH; x++) {
+			draw_pixel(x, y, BACKGROUND_COLOR);
 		}
 	}
 }
@@ -182,7 +242,6 @@ void grab_digits(int8_t score_array[SCORE_ARRAY_SIZE], uint16_t score) {
 		score /= 10;
 	}
 }
-
 
 // draws the score onto the screen in the top left corner
 void display_draw_score(uint16_t score) {
@@ -434,7 +493,7 @@ void kill_alien(uint8_t index) {
 #define ROW_5_MULT 4
 ///////////////////////////////////////
 
-uint16_t calculate_alineY_pos(uint8_t alien_y, uint8_t alien_index) {
+uint16_t calculate_alineY_pos(uint16_t alien_y, uint8_t alien_index) {
 	if(alien_index >= ROW_2 && alien_index < ROW_3) {
 	//if the alien is on the second row move y coord accordingly
 		alien_y += DISTANCE_BETWEEN_ALIEN_ROWS;
@@ -459,6 +518,7 @@ uint16_t display_erase_alien(uint8_t alien_index, point_t erase_alien_pos) {
 	uint16_t x = 0;
 	uint16_t alien_x = erase_alien_pos.x + (alien_index % NUM_COLUMNS) * DISTANCE_BETWEEN_ALIEN_COLUMNS;
 	uint16_t alien_y = erase_alien_pos.y;
+	//xil_printf("erasing alien at pos (%d, %d)\n\r", alien_x, alien_y);
 
 	alien_y = calculate_alineY_pos(alien_y, alien_index);
 
@@ -788,9 +848,10 @@ enum bullet_type{
 };
 
 #define NUM_ALIEN_ROWS 5
+#define ERROR_VAL 55
 uint8_t get_alien_index(uint16_t x, uint16_t y){
 	point_t alien_block = get_alien_block_position();
-	uint16_t alien_block_x = alien_block.x;
+	int16_t alien_block_x = alien_block.x;
 	uint16_t alien_block_y = alien_block.y;
 	uint16_t i, j;
 	//if x is first column
@@ -803,8 +864,8 @@ uint8_t get_alien_index(uint16_t x, uint16_t y){
 			}
 		}
 	}
-	//xil_printf("should have found alien. This shoulnd't have printed oops\n\n\r");
-	return 0;
+	xil_printf("should have found alien. This shouldn't have printed oops\n\n\r");
+	return ERROR_VAL;
 }
 
 #define NUM_BUNKERS 4
@@ -845,23 +906,25 @@ uint8_t check_bullet_collision(uint16_t x, uint16_t y, uint8_t bullet_type){
 		//it's it hit an alien
 		if(color == ALIEN_COLOR){
 			erase_tank_bullet();
-			uint8_t alien_index = get_alien_index(x,y);
-			//xil_printf("killing alien: %d\r\n", alien_index);
-			set_most_recent_alien_death(alien_index);
-			kill_alien(alien_index);
-			//draw_alien_death(alien_index);
-			return TRUE;
+			int16_t alien_index = get_alien_index(x,y);
+			if(alien_index >= 0 && alien_index < NUM_ALIENS){
+				set_most_recent_alien_death(alien_index);
+				kill_alien(alien_index);
+				return TRUE;
+			}
 		}else if(color == BUNKER_COLOR){
 			//degrade_bunker
 			erase_tank_bullet();
 			uint8_t bunker = get_bunker_index(x);
 			degrade_bunker_block(get_bunker(bunker), get_bunker_block_index(x,y));
 			draw_bunker_block(bunker, get_bunker_block_index(x,y));
-			//xil_printf("hit bunker: %d\r\n",bunker);
 			return TRUE;
 		}else if(color == RED_GUY_COLOR){
 			//kill red guy
+			display_erase_red_guy();
+			set_red_guy_pos(OFF_SCREEN);
 			erase_tank_bullet();
+			return TRUE;
 		}
 	}else{
 	//else it's an alien bullet
@@ -1084,45 +1147,47 @@ point_t cause_an_alien_to_shoot() {
 	uint8_t found = FALSE;
 	point_t alien_to_shoot_coor = {IMPOSSIBLE_COOR, IMPOSSIBLE_COOR}; // init to impossible values
 	uint32_t r = rand() % NUM_ALIENS;      // randomly select an alien column
+	uint8_t fall_back_column = 0;
 
-	// determine if the lowest alien in that column
-	// start at the last row, see if alien. if no alien
-	// move up a row and check
-	for (i = r + LAST_ORIGINAL_ALIEN_ROW_INDEX; i >= 0 ; i -= NUM_COLUMNS) {
-		if (alien_array[i] == 1) {// if alien is alive, find a point to shoot from
-			alien_to_shoot_coor = get_alien_block_position();
+	while (!found) {
+		// determine if the lowest alien in that column
+		// start at the last row, see if alien. if no alien
+		// move up a row and check
+		for (i = r + LAST_ORIGINAL_ALIEN_ROW_INDEX; i >= 0 ; i -= NUM_COLUMNS) {
+			if (alien_array[i] == 1) {// if alien is alive, find a point to shoot from
+				alien_to_shoot_coor = get_alien_block_position();
 
-			alien_to_shoot_coor.x = alien_to_shoot_coor.x + ( i % NUM_COLUMNS) * DISTANCE_BETWEEN_ALIEN_COLUMNS + ALIEN_WIDTH - CENTER_SHOT;
+				alien_to_shoot_coor.x = alien_to_shoot_coor.x + ( i % NUM_COLUMNS) * DISTANCE_BETWEEN_ALIEN_COLUMNS + ALIEN_WIDTH - CENTER_SHOT;
 
-			//if row 1 get the y coordinate of that row
-			if (i >= 0 && i < ROW_2) {
-				alien_to_shoot_coor.y = alien_to_shoot_coor.y + ALIEN_HEIGHT * DOUBLE_BITMAP;
+				//if row 1 get the y coordinate of that row
+				if (i >= 0 && i < ROW_2) {
+					alien_to_shoot_coor.y = alien_to_shoot_coor.y + ALIEN_HEIGHT * DOUBLE_BITMAP;
+				}
+				//if row 2 get the y coordinate of that row
+				else if(i >= ROW_2 && i < ROW_3) {
+					alien_to_shoot_coor.y = alien_to_shoot_coor.y + DISTANCE_BETWEEN_ALIEN_ROWS + ALIEN_HEIGHT * DOUBLE_BITMAP;
+				}
+				//if row 3 get the y coordinate of that row
+				else if(i >= ROW_3 && i < ROW_4) {
+					alien_to_shoot_coor.y = alien_to_shoot_coor.y + DISTANCE_BETWEEN_ALIEN_ROWS * ROW_3_MULT + ALIEN_HEIGHT * DOUBLE_BITMAP;
+				}
+				//if row 4 get the y coordinate of that row
+				else if(i >= ROW_4 && i < ROW_5) {
+					alien_to_shoot_coor.y = alien_to_shoot_coor.y + DISTANCE_BETWEEN_ALIEN_ROWS * ROW_4_MULT + ALIEN_HEIGHT * DOUBLE_BITMAP;
+				}
+				//if row 5 get the y coordinate of that row
+				else if(i >= ROW_5) {
+					alien_to_shoot_coor.y = alien_to_shoot_coor.y + DISTANCE_BETWEEN_ALIEN_ROWS * ROW_5_MULT + ALIEN_HEIGHT * DOUBLE_BITMAP;
+				}
+				found = TRUE;
+				break;
 			}
-			//if row 2 get the y coordinate of that row
-			else if(i >= ROW_2 && i < ROW_3) {
-				alien_to_shoot_coor.y = alien_to_shoot_coor.y + DISTANCE_BETWEEN_ALIEN_ROWS + ALIEN_HEIGHT * DOUBLE_BITMAP;
-			}
-			//if row 3 get the y coordinate of that row
-			else if(i >= ROW_3 && i < ROW_4) {
-				alien_to_shoot_coor.y = alien_to_shoot_coor.y + DISTANCE_BETWEEN_ALIEN_ROWS * ROW_3_MULT + ALIEN_HEIGHT * DOUBLE_BITMAP;
-			}
-			//if row 4 get the y coordinate of that row
-			else if(i >= ROW_4 && i < ROW_5) {
-				alien_to_shoot_coor.y = alien_to_shoot_coor.y + DISTANCE_BETWEEN_ALIEN_ROWS * ROW_4_MULT + ALIEN_HEIGHT * DOUBLE_BITMAP;
-			}
-			//if row 5 get the y coordinate of that row
-			else if(i >= ROW_5) {
-				alien_to_shoot_coor.y = alien_to_shoot_coor.y + DISTANCE_BETWEEN_ALIEN_ROWS * ROW_5_MULT + ALIEN_HEIGHT * DOUBLE_BITMAP;
-			}
-			found = TRUE;
-			break;
 		}
+		r = fall_back_column;
+		fall_back_column++;
 	}
-	if (found) {
-		return alien_to_shoot_coor;
-	}
-	// is it okay if an entire row is gone, that nothing gets shot when this function is called?
 	return alien_to_shoot_coor;
+
 
 }
 
