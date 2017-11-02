@@ -44,6 +44,26 @@ typedef struct {uint16_t x; uint16_t y;} point_t;
 //returns the y position of the lowest living alien
 uint16_t lowest_alien_y();
 
+uint16_t get_volume();
+
+void set_volume(uint16_t vol);
+
+uint8_t get_tank_bullet_just_fired();
+
+void set_tank_bullet_just_fired(uint8_t just_fired);
+
+uint8_t get_tank_just_died();
+
+void set_tank_just_died(uint8_t tank_died);
+
+uint8_t get_alien_just_died();
+
+void set_alien_just_died(uint8_t alien_died);
+
+uint8_t get_red_guy_just_died();
+
+void set_red_guy_just_died(uint8_t red_guy_died);
+
 //gets red guy moving direction
 void set_red_guy_direction(uint8_t direction);
 
@@ -190,5 +210,9 @@ void set_score(uint16_t score);
 
 //gets the score
 uint16_t get_score();
+
+void set_move_alien_sound(uint8_t value);
+
+uint8_t get_move_alien_sound();
 
 #endif

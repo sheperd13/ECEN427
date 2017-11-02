@@ -6,6 +6,7 @@
 #include <xbasic_types.h>
 #include <xio.h>
 #include "xac97_l.h"
+#include <stdio.h>
 
 void XAC97_WriteReg(Xuint32 baseaddr, Xuint32 reg_addr, Xuint32 value) {
     XAC97_mSetAC97RegisterData(baseaddr, value);
@@ -135,18 +136,6 @@ void XAC97_PlayAudio(Xuint32 BaseAddress, Xuint32 StartAddress,
 
   /** Wait for the ready signal **/
   XAC97_AwaitCodecReady(BaseAddress);
-
-  /** Disable VRA Mode **/
-  XAC97_WriteReg(BaseAddress, AC97_ExtendedAudioStat, 0);
-
-  /** Play Volume Settings **/
-  XAC97_WriteReg(BaseAddress, AC97_MasterVol, AC97_VOL_MAX);
-  XAC97_WriteReg(BaseAddress, AC97_AuxOutVol, AC97_VOL_MAX);
-  XAC97_WriteReg(BaseAddress, AC97_MasterVolMono, AC97_VOL_MAX);
-  XAC97_WriteReg(BaseAddress, AC97_PCBeepVol, AC97_VOL_MAX);
-  XAC97_WriteReg(BaseAddress, AC97_PCMOutVol, AC97_VOL_MAX);
-  XAC97_WriteReg(BaseAddress, AC97_LineInVol, AC97_VOL_MAX);
-  XAC97_WriteReg(BaseAddress, AC97_MicVol, AC97_VOL_MAX);
 
   /** Clear FIFOs **/
   XAC97_ClearFifos(BaseAddress);

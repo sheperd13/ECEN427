@@ -1,10 +1,18 @@
 // Demonstrates one way to handle globals safely in C.
 #include "globals.h"
 #include "display.h"
+#include "xac97_l.h"
 #include <stdio.h>
 
 
 // Here are the globals.
+
+//sound stuff
+static uint8_t tank_bullet_just_fired = FALSE;
+static uint8_t tank_just_died = FALSE;
+static uint8_t alien_just_died = FALSE;
+static uint8_t red_guy_just_died = FALSE;
+
 static uint16_t tankPosition; //tank position
 static point_t tankBulletPosition; //tank bullet position
 static point_t alienBlockPosition; //alien block position
@@ -56,6 +64,11 @@ static uint16_t total_score = 0;
 //boolean for whether or not all aliens are dead
 static uint8_t aliens_dead = 0;
 
+// sound stuff
+static uint8_t alien_sound = 0;
+
+static uint16_t volume = AC97_VOL_MAX;
+
 //gives an initial value to the tank and alien block
 void init_pos(){
 	alienBlockPosition.x = ALIEN_BLOCK_START_X;
@@ -79,6 +92,46 @@ uint16_t lowest_alien_y(){
 		}
 	}
 	return ERROR_VAL;
+}
+
+uint16_t get_volume(){
+	return volume;
+}
+
+void set_volume(uint16_t vol){
+	volume = vol;
+}
+
+uint8_t get_tank_bullet_just_fired(){
+	return tank_bullet_just_fired;
+}
+
+void set_tank_bullet_just_fired(uint8_t just_fired){
+	tank_bullet_just_fired = just_fired;
+}
+
+uint8_t get_tank_just_died(){
+	return tank_just_died;
+}
+
+void set_tank_just_died(uint8_t tank_died){
+	tank_just_died = tank_died;
+}
+
+uint8_t get_alien_just_died(){
+	return alien_just_died;
+}
+
+void set_alien_just_died(uint8_t alien_died){
+	alien_just_died = alien_died;
+}
+
+uint8_t get_red_guy_just_died(){
+	return red_guy_just_died;
+}
+
+void set_red_guy_just_died(uint8_t red_guy_died){
+	red_guy_just_died = red_guy_died;
 }
 
 //sets the aliens dead flag
@@ -425,4 +478,12 @@ void set_score(uint16_t score) {
 //gets the score
 uint16_t get_score() {
 	return total_score;
+}
+
+void set_move_alien_sound(uint8_t value) {
+	alien_sound = value;
+}
+
+uint8_t get_move_alien_sound() {
+	return alien_sound;
 }

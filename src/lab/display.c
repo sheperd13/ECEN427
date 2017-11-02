@@ -1011,6 +1011,7 @@ uint8_t check_bullet_collision(uint16_t x, uint16_t y, uint8_t bullet_type){
 			display_erase_red_guy();
 			erase_tank_bullet();
 			set_red_guy_destroyed_flag(TRUE);
+			set_red_guy_just_died(TRUE);
 			return TRUE;
 		}
 	}else{
@@ -1315,7 +1316,7 @@ void shoot_tank_bullet() {
 	if (get_tank_bullet_inflight() == TRUE) { // bullet is already in flight?
 		return;
 	}
-
+	set_tank_bullet_just_fired(TRUE);
 	//
 	uint16_t bullet_x = getTankPositionGlobal() + (TANK_WIDTH / DOUBLE_BITMAP) - SMALL_OFFSET; //get bullet x
 	uint16_t bullet_y = TANK_Y_POS - TANK_BULLET_HEIGHT * DOUBLE_BITMAP - 1;			//get bullet y

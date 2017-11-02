@@ -16,7 +16,7 @@
 #define WORD_WIDTH 32	//bitmap width
 #define SCREEN_HEIGHT 480	//screen height
 #define SCREEN_WIDTH 640	//screen width
-#define FRAME_BUFFER_0_ADDR 0xC1000000  // Starting location in DDR where we will store the images that we display.
+#define FRAME_BUFFER_0_ADDR 0xC2000000  // Starting location in DDR where we will store the images that we display.
 #define DISTANCE_BETWEEN_ALIEN_ROWS 30	//distance from on starting x coordinate to the next column
 #define DISTANCE_BETWEEN_ALIEN_COLUMNS (ALIEN_WIDTH * 2 + 5)	//distance between starting y to next row starting y
 #define DISPLAY_WHITE 0xFFFFFFFF	//white

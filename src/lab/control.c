@@ -12,6 +12,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+//#include "sound.h"
+#include "xac97_l.h"
 
 #define KILL_ALIEN_DIGITS 2 //number of digits in the aliens killed index
 #define INPUT_MULTIPLIER 10 //multiplier of sorts
@@ -50,6 +52,9 @@
 #define RED_GUY_SPEED_VAL 2		//refresh rate for red guy
 
 #define RED_GUY_SCORE_MAX 100	//length of the red guy's score on screen
+
+extern uint32_t fastInvader_1_soundData[];
+extern uint32_t fastInvader_1_numberOfSamples;
 
 //game states
 enum game_st_t {
@@ -94,6 +99,7 @@ int16_t red_guy_death_pos;	//x position of red guy's demise
 
 uint8_t aliens_too_low = FALSE;	//boolean indicating whether or not the aliens are too low
 
+
 //possible object types
 enum object_type {tank, bunker, alien, saucer};
 
@@ -102,7 +108,7 @@ void summon_red_guy() {
 	uint8_t direction = get_red_guy_direction();
 	//only summon him if he is not already on screen
 	if(!red_guy_on_screen){
-		red_guy_on_screen = !red_guy_on_screen;
+		red_guy_on_screen = TRUE;
 		//if he's moving right then start him on the left side of screen
 		if(direction == RED_GUY_RIGHT){
 			set_red_guy_pos(RED_GUY_LEFT_START);
@@ -128,7 +134,7 @@ void move_red_guy(){
 			if(cur_pos >= SCREEN_WIDTH){
 				set_red_guy_pos(OFF_SCREEN);
 				set_red_guy_direction(!direction);
-				red_guy_on_screen = !red_guy_on_screen;
+				red_guy_on_screen = FALSE;
 			}
 		}else{
 		//else if he's moving left the do the opposite
@@ -137,7 +143,7 @@ void move_red_guy(){
 			if((int16_t)cur_pos < 0 - RED_GUY_WIDTH * DOUBLE_BITMAP){
 				set_red_guy_pos(OFF_SCREEN);
 				set_red_guy_direction(!direction);
-				red_guy_on_screen = !red_guy_on_screen;
+				red_guy_on_screen = FALSE;
 			}
 		}
 	}
@@ -237,6 +243,7 @@ void update_bullets() {
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 }
 
+
 #define RED_GUY_INC_SIZE 50
 //contains the logic for everything that happens while the game is running
 void game_running(uint32_t btn) {
@@ -264,7 +271,7 @@ void game_running(uint32_t btn) {
 		set_most_recent_alien_death(INVALID_INDEX);	//update the recent death variable
 		display_explode_alien(alien_death_index, alien_pos);	//draw death animation
 		start_alien_explosion_counter = TRUE;	//start the death animation counter
-
+		set_alien_just_died(TRUE);
 	}
 
 	// counter for the duration of the alien explosion
@@ -280,6 +287,7 @@ void game_running(uint32_t btn) {
 	if (alien_speed_curr_counter_val >= alien_speed_max_counter_val) {
 		move_aliens();
 		draw_aliens();
+		set_move_alien_sound(TRUE);
 		//increases alien movement speed as more of them die
 		alien_speed_max_counter_val = get_aliens_still_alive() + ALIEN_SPEED_INC_VAL;
 		alien_speed_curr_counter_val = 0;
@@ -312,7 +320,7 @@ void game_running(uint32_t btn) {
 	}
 
 	//ends the program and performs cleanup routine
-	if ((btn & BTN_DOWN_MASK) == BTN_DOWN_MASK) {
+	if ((btn & (BTN_DOWN_MASK | BTN_UP_MASK)) == (BTN_DOWN_MASK | BTN_UP_MASK)) {
 		cleanup_platform();	//cleanup
 		exit(0);
 	}
@@ -347,6 +355,7 @@ void game_running(uint32_t btn) {
 
 	//if we lost a life then go to tank death animation
 	if (tank_lives > getLives()) {
+		set_tank_just_died(TRUE);
 		currentState = dead_tank_st;
 		tank_dead_counter = 0;
 		tank_lives = getLives();
@@ -354,6 +363,7 @@ void game_running(uint32_t btn) {
 
 	//if all aliens are dead the end the game
 	if(get_aliens_dead()){
+		set_red_guy_pos(OFF_SCREEN);
 		currentState = game_over_st;
 	}
 
@@ -375,6 +385,7 @@ void game_running(uint32_t btn) {
 
 	//if the red guy is destroyed then set things up for death animation
 	if (get_red_guy_destroyed_flag()) {
+		red_guy_on_screen = FALSE;
 		display_erase_red_guy();	//erase red guy
 		red_guy_just_died = TRUE;	//say that he just died
 		set_red_guy_destroyed_flag(FALSE);	//reset destroyed flag
@@ -409,6 +420,7 @@ void game_running(uint32_t btn) {
 		display_erase_red_guy();
 		set_red_guy_pos(OFF_SCREEN);
 	}
+
 }
 
 //the game state machine
@@ -458,17 +470,17 @@ void game_tick(uint32_t btn) {
 			break;
 		case start_screen_st:	//waits here after initialization
 			//if up button is pushed then start the game
-			if ((btn & BTN_UP_MASK) == BTN_UP_MASK) {
 				display_render();
 				alien_bullet_rate_counter_max = rand() % ALIEN_BULLET_FREQ + ALIEN_BULLET_MIN_WAIT; // random value between 1-1+ALIEN_BULLET_FREQ
 				currentState = resume_game_st;
-			}
+
 			break;
 		case resume_game_st:	//all gameplay done here
 			//calls the tick function
 			game_running(btn);
 			//if the aliens are too low then end the game
 			if(aliens_too_low){
+				set_red_guy_pos(OFF_SCREEN);
 				currentState = game_over_st;
 			}
 			break;
@@ -477,6 +489,7 @@ void game_tick(uint32_t btn) {
 				tank_dead_counter = 0;
 				//if we are out of lives then go to game over
 				if(getLives() == 0){
+					set_red_guy_pos(OFF_SCREEN);
 					currentState = game_over_st;
 					break;
 				}
@@ -485,7 +498,8 @@ void game_tick(uint32_t btn) {
 			}
 			break;
 		case game_over_st:	//sits here until up button pushed to start new game
-			if((btn & BTN_UP_MASK) == BTN_UP_MASK){
+			if((btn & (BTN_LEFT_MASK | BTN_RIGHT_MASK)) == (BTN_LEFT_MASK | BTN_RIGHT_MASK)){
+				set_red_guy_pos(OFF_SCREEN);
 				currentState = init_st;
 			}
 			break;
