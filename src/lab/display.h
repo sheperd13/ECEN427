@@ -13,10 +13,14 @@
 #include "display.h"
 #include "globals.h"
 
+#define GAME_DISPLAY_BUFFER 1
+#define SAVED_GAME_DISPLAY_BUFFER 0
 #define WORD_WIDTH 32	//bitmap width
 #define SCREEN_HEIGHT 480	//screen height
 #define SCREEN_WIDTH 640	//screen width
+#define BYTE_ON_SCREEN (SCREEN_HEIGHT * SCREEN_WIDTH * 4) // 4 is number of bytes per pixel
 #define FRAME_BUFFER_0_ADDR 0xC2000000  // Starting location in DDR where we will store the images that we display.
+#define FRAME_BUFFER_SAVED_ADDR 0xC5000000 // the address where we will save the screen capture
 #define DISTANCE_BETWEEN_ALIEN_ROWS 30	//distance from on starting x coordinate to the next column
 #define DISTANCE_BETWEEN_ALIEN_COLUMNS (ALIEN_WIDTH * 2 + 5)	//distance between starting y to next row starting y
 #define DISPLAY_WHITE 0xFFFFFFFF	//white
@@ -91,6 +95,7 @@
 //initializes display prepping it for use
 void display_init();
 
+void display_set_frame_buffer(uint8_t isGameScreen);
 //inits stuff
 void init_stuff();
 

@@ -20,7 +20,7 @@
 #define MAX_NUM_DIGITS 10
 #define INVALID_SCORE -1 // this helps keep track of the score
 
-
+XAxiVdma_DmaSetup myFrameBuffer;
 static uint8_t legs_in; //aliens in/out legs
 XAxiVdma videoDMAController;	//part of VDMA code
 unsigned int * framePointer0 = (unsigned int *) FRAME_BUFFER_0_ADDR;	//definition of frame pointer
@@ -167,7 +167,7 @@ void init_stuff(){
 	set_max_alien_pos(SCREEN_WIDTH-ALIEN_BLOCK_WIDTH-ALIEN_SPEED);
 	set_min_alien_pos(ALIEN_SPEED);
 	point_t block_pos = get_alien_block_position();
-	set_alien_right_column_edge(block_pos.x + ALIEN_BLOCK_WIDTH - ALIEN_WIDTH*2);
+	set_alien_right_column_edge(block_pos.x + ALIEN_BLOCK_WIDTH - ALIEN_WIDTH*DOUBLE_BITMAP);
 	set_alien_left_column_edge(block_pos.x);
 }
 
@@ -226,12 +226,32 @@ void display_init() {
 	// is where you will write your video data. The vdma IP/driver then streams it to the HDMI
 	// IP.
 	myFrameBuffer.FrameStoreStartAddr[0] = FRAME_BUFFER_0_ADDR;
-	//myFrameBuffer.FrameStoreStartAddr[1] = FRAME_BUFFER_0_ADDR;
+	myFrameBuffer.FrameStoreStartAddr[1] = FRAME_BUFFER_SAVED_ADDR;
 
 	if (XST_FAILURE == XAxiVdma_DmaSetBufferAddr(&videoDMAController,
 			XAXIVDMA_READ, myFrameBuffer.FrameStoreStartAddr)) {
 		xil_printf("DMA Set Address Failed Failed\r\n");
 	}
+}
+
+void display_set_frame_buffer(uint8_t isGameScreen) {
+	static uint8_t last_buffer = GAME_DISPLAY_BUFFER;
+	if (last_buffer == isGameScreen) {
+		return;
+	}
+	last_buffer = isGameScreen;
+
+	if (isGameScreen) {
+		if (XST_FAILURE == XAxiVdma_StartParking(&videoDMAController, 0, XAXIVDMA_READ)) {
+			xil_printf("DMA Set Address Failed Failed\r\n");
+		}
+	}
+	else {
+		if (XST_FAILURE == XAxiVdma_StartParking(&videoDMAController, 1, XAXIVDMA_READ)) {
+			xil_printf("DMA Set Address Failed Failed\r\n");
+		}
+	}
+
 }
 
 // grabs each of the digits in score and places inside score_array in reverse order.

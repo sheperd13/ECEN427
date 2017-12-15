@@ -198,7 +198,7 @@ _SDA2_BASE_ = __sdata2_start + ((__sbss2_end - __sdata2_start) / 2 );
    _heap_start = .;
    . += _HEAP_SIZE;
    _heap_end = .;
-} > microblaze_0_i_bram_ctrl_microblaze_0_d_bram_ctrl
+} > MCB_DDR2_S0_AXI_BASEADDR
 
 .stack : {
    _stack_end = .;
@@ -206,7 +206,7 @@ _SDA2_BASE_ = __sdata2_start + ((__sbss2_end - __sdata2_start) / 2 );
    . = ALIGN(8);
    _stack = .;
    __stack = _stack;
-} > microblaze_0_i_bram_ctrl_microblaze_0_d_bram_ctrl
+} > MCB_DDR2_S0_AXI_BASEADDR
 
 _end = .;
 }

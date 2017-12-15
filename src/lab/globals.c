@@ -66,8 +66,28 @@ static uint8_t aliens_dead = 0;
 
 // sound stuff
 static uint8_t alien_sound = 0;
-
 static uint16_t volume = AC97_VOL_MAX;
+
+static float x_acc = 0;
+static float y_acc = 0;
+
+// sets the x acceleration from uart;
+void globals_setAccel_X(float x_float) {
+	x_acc = x_float;
+}
+
+// sets the y acceleration from uart;
+void globals_setAccel_Y(float y_float) {
+	y_acc = y_float;
+}
+
+float globals_getAccel_X() {
+	return x_acc;
+}
+
+float globals_getAccel_Y() {
+	return y_acc;
+}
 
 //gives an initial value to the tank and alien block
 void init_pos(){

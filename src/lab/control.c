@@ -14,6 +14,7 @@
 #include <time.h>
 //#include "sound.h"
 #include "xac97_l.h"
+//#include "pit.h"
 
 #define KILL_ALIEN_DIGITS 2 //number of digits in the aliens killed index
 #define INPUT_MULTIPLIER 10 //multiplier of sorts
@@ -62,7 +63,9 @@ enum game_st_t {
 	start_screen_st,
 	resume_game_st,
 	dead_tank_st,
-	game_over_st
+	game_over_st,
+	pause_st
+
 } currentState = init_st;
 
 point_t alien_pos;	//alien block position
@@ -171,6 +174,27 @@ void move_tank_left() {
 	}
 	else{
 		setTankPositionGlobal(pos - TANK_SPEED);
+	}
+}
+
+
+void ble_tank_controller() {
+	float x_acc = globals_getAccel_X();
+	float y_acc = globals_getAccel_Y();
+
+	if (x_acc < 0) { // shoot tank if screen tilted forward
+		//xil_printf("shooting tank bullet\n\r");
+		shoot_tank_bullet();
+	}
+	if (y_acc < -4) { // if screen tilted to left by a factor
+		//xil_printf("moving tank to left\n\r");
+		move_tank_left();
+		draw_tank();
+	}
+	else if (y_acc > 4) {
+		//xil_printf("moving tank to right\n\r");
+		move_tank_right();
+		draw_tank();
 	}
 }
 
@@ -325,18 +349,17 @@ void game_running(uint32_t btn) {
 		exit(0);
 	}
 
+	//BLE TANK_CONTROLLER
+	ble_tank_controller();
+
 	//move the tank right when right button is pushed
 	if ((btn & BTN_RIGHT_MASK) == BTN_RIGHT_MASK) {
-		//currently TANK_MOVE_SPEED_VAL = 0 so we get warnings when this compiles
-		//so it's commented out for now
-		//if (tank_move_speed_counter >= TANK_MOVE_SPEED_VAL) {
-			move_tank_right();
-			draw_tank();
-			tank_move_speed_counter = 0;
-		//}
-		//else {
-			tank_move_speed_counter++;
-		//}
+
+		move_tank_right();
+		draw_tank();
+		tank_move_speed_counter = 0;
+
+
 	}
 
 	//moves tank left when left button is pushed
@@ -346,11 +369,6 @@ void game_running(uint32_t btn) {
 		//if (tank_move_speed_counter >= TANK_MOVE_SPEED_VAL) {
 			move_tank_left();
 			draw_tank();
-			tank_move_speed_counter = 0;
-		//}
-		//else {
-			tank_move_speed_counter++;
-		//}
 	}
 
 	//if we lost a life then go to tank death animation
@@ -422,9 +440,9 @@ void game_running(uint32_t btn) {
 	}
 
 }
-
+#define PAUSE_GAME_MASK 0x20
 //the game state machine
-void game_tick(uint32_t btn) {
+void game_tick(uint32_t btn, uint32_t switches) {
 
 	//moore machine. Actions taken in states
 	switch(currentState) {
@@ -459,6 +477,8 @@ void game_tick(uint32_t btn) {
 			break;
 		case game_over_st:	//sits here until up button pushed
 			break;
+		case pause_st:
+			break;
 		default:
 			break;
 	}
@@ -479,7 +499,10 @@ void game_tick(uint32_t btn) {
 			//calls the tick function
 			game_running(btn);
 			//if the aliens are too low then end the game
-			if(aliens_too_low){
+			if (switches & PAUSE_GAME_MASK) {
+				currentState = pause_st;
+			}
+			else if(aliens_too_low){
 				set_red_guy_pos(OFF_SCREEN);
 				currentState = game_over_st;
 			}
@@ -500,7 +523,14 @@ void game_tick(uint32_t btn) {
 		case game_over_st:	//sits here until up button pushed to start new game
 			if((btn & (BTN_LEFT_MASK | BTN_RIGHT_MASK)) == (BTN_LEFT_MASK | BTN_RIGHT_MASK)){
 				set_red_guy_pos(OFF_SCREEN);
+				//pit_load_delay_cntr(1000000000);
+				//pit_stop();
 				currentState = init_st;
+			}
+			break;
+		case pause_st:
+			if (!(switches & PAUSE_GAME_MASK)) {
+				currentState = resume_game_st;
 			}
 			break;
 		default:

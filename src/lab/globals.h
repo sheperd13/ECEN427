@@ -41,6 +41,17 @@ void init_bunker_state();
 //definition of a point
 typedef struct {uint16_t x; uint16_t y;} point_t;
 
+// EXTRA PERSONAL PROJECT ///
+void globals_setAccel_X(float x_float);
+
+void globals_setAccel_Y(float y_float);
+
+float globals_getAccel_X();
+
+float globals_getAccel_Y();
+
+// END EXTRA PERSONAL PROJECT ///
+
 //returns the y position of the lowest living alien
 uint16_t lowest_alien_y();
 
